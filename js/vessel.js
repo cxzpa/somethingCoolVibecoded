@@ -481,8 +481,9 @@ function buildWing(side) {
     pivot.add(mesh);
     const v = new THREE.Line(new THREE.BufferGeometry().setFromPoints(vein), WING.vein); pivot.add(v);
     const v2 = new THREE.Line(new THREE.BufferGeometry().setFromPoints(vein.map(p => new THREE.Vector3(p.x, p.y, -p.z))), WING.vein); pivot.add(v2);
-    pivot.userData = { spread: 1.5 - 2.0 * f, fold: -1.25 - 0.3 * f, phase: k * 0.7 };
-    pivot.position.z = (k - N / 2) * 0.0025; // stacked, so blades never z-fight
+    pivot.userData = { spread: 1.2 - 1.75 * f, fold: -1.25 - 0.3 * f, phase: k * 0.7 };
+    // stacked further apart than a blade is thick (~6 mm), so blades never cut through each other
+    pivot.position.z = (k - (N - 1) / 2) * -0.008;
     wing.add(pivot); blades.push(pivot);
   }
   // a small spiked sigil disc where the blades meet
@@ -515,7 +516,11 @@ function setupWings(bones, root) {
   const wings = [-1, 1].map((side) => {
     const mount = new THREE.Group();
     // Blender (x, y-back, z-up) -> glTF (x, z, -y): the back of the ribcage at chest height
-    mountOnBone(chest, skinned, mount, new THREE.Vector3(side * 0.03, 1.27, -0.088));
+    mountOnBone(chest, skinned, mount, new THREE.Vector3(side * 0.035, 1.27, -0.13));
+    // a short chrome strut from her spine out to the wing hub
+    const a = new THREE.Vector3(side * 0.008, 1.245, -0.09), b = new THREE.Vector3(side * 0.035, 1.27, -0.13);
+    const strut = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.009, a.distanceTo(b), 10), WING.chrome);
+    mountOnBone(chest, skinned, strut, a.clone().add(b).multiplyScalar(0.5), new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize()));
     const mirror = new THREE.Group(); mirror.scale.x = side; mount.add(mirror);
     const w = buildWing(side); mirror.add(w);
     return w;
@@ -529,9 +534,10 @@ function setupWings(bones, root) {
       st.spread = lerp(st.spread, drained ? 0.06 : awake ? 1 : 0.55, k);
       st.glow = lerp(st.glow, drained ? 0 : awake ? 1 : 0.28 + 0.12 * Math.sin(t * 1.3), k * 1.5);
       wings.forEach((w) => {
-        // fold back behind her when closed, open flat when spread
-        w.rotation.y = lerp(-1.05, -0.18, st.spread);
-        w.rotation.x = lerp(0.35, 0.05, st.spread);
+        // always swept BACK, away from her body (+y rotation turns the outward blades toward her back,
+        // for both the plain and the mirrored wing), and tipped back to offset her forward curl
+        w.rotation.y = lerp(1.15, 0.5, st.spread);
+        w.rotation.x = lerp(-0.25, -0.5, st.spread);
         w.userData.blades.forEach((b) => {
           const u = b.userData;
           b.rotation.z = lerp(u.fold, u.spread, st.spread) + (reduceMotion ? 0 : Math.sin(t * 0.9 + u.phase) * 0.035 * (0.4 + st.spread));
