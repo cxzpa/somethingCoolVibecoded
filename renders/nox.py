@@ -47,11 +47,11 @@ BONES = [
 ]
 for s, sx in (("L", 1), ("R", -1)):
     BONES += [
-        (f"shoulder.{s}", (0.02 * sx, 0, 1.335), (0.15 * sx, 0, 1.335), "chest"),
-        (f"upper_arm.{s}", (0.16 * sx, 0, 1.33), (0.205 * sx, 0.005, 1.085), f"shoulder.{s}"),
-        (f"forearm.{s}", (0.205 * sx, 0.005, 1.085), (0.245 * sx, -0.012, 0.865), f"upper_arm.{s}"),
-        (f"hand.{s}", (0.245 * sx, -0.012, 0.865), (0.258 * sx, -0.02, 0.765), f"forearm.{s}"),
-        (f"thigh.{s}", (0.085 * sx, 0, 0.9), (0.095 * sx, -0.006, 0.49), "hips"),
+        (f"shoulder.{s}", (0.02 * sx, 0, 1.335), (0.136 * sx, 0, 1.335), "chest"),
+        (f"upper_arm.{s}", (0.145 * sx, 0, 1.33), (0.19 * sx, 0.005, 1.085), f"shoulder.{s}"),
+        (f"forearm.{s}", (0.19 * sx, 0.005, 1.085), (0.232 * sx, -0.012, 0.865), f"upper_arm.{s}"),
+        (f"hand.{s}", (0.232 * sx, -0.012, 0.865), (0.245 * sx, -0.02, 0.765), f"forearm.{s}"),
+        (f"thigh.{s}", (0.096 * sx, 0, 0.9), (0.092 * sx, -0.006, 0.49), "hips"),
         (f"shin.{s}", (0.095 * sx, -0.006, 0.49), (0.1 * sx, 0.012, 0.09), f"thigh.{s}"),
         (f"foot.{s}", (0.1 * sx, 0.012, 0.09), (0.1 * sx, -0.11, 0.02), f"shin.{s}"),
     ]
@@ -116,32 +116,33 @@ def build_body():
     capsule(bm, (0, 0.008, 1.36), (0, 0.006, 1.5), 0.034, 0.03)  # a slimmer neck into the head
     # collarbones, upper chest, shoulder blades, a hint of abdomen
     for sx in (-1, 1):
-        capsule(bm, (0.018 * sx, -0.05, 1.352), (0.13 * sx, -0.022, 1.348), 0.011, 0.012, segs=14)
+        capsule(bm, (0.018 * sx, -0.05, 1.352), (0.118 * sx, -0.022, 1.348), 0.01, 0.011, segs=14)
         ellipsoid(bm, (0.062 * sx, 0.062, 1.27), (0.05, 0.022, 0.065), rot=(0.1, 0, 0.15 * sx))
     ellipsoid(bm, (0, -0.046, 1.08), (0.062, 0.03, 0.075))
     # torso: ribcage, waist, pelvis, bust, glutes, shoulders
-    ellipsoid(bm, (0, 0.004, 1.24), (0.112, 0.078, 0.125))
-    ellipsoid(bm, (0, 0.002, 1.09), (0.077, 0.059, 0.09))
-    ellipsoid(bm, (0, 0.0, 0.94), (0.128, 0.088, 0.088))
+    ellipsoid(bm, (0, 0.004, 1.24), (0.101, 0.074, 0.122))
+    ellipsoid(bm, (0, 0.002, 1.09), (0.07, 0.055, 0.09))
+    ellipsoid(bm, (0, 0.0, 0.94), (0.146, 0.092, 0.092))
     for sx in (-1, 1):
         ellipsoid(bm, (0.052 * sx, -0.052, 1.215), (0.05, 0.042, 0.048), rot=(0, 0, 0.2 * sx))
-        ellipsoid(bm, (0.058 * sx, 0.035, 0.9), (0.066, 0.062, 0.07))
-        ellipsoid(bm, (0.14 * sx, 0.004, 1.322), (0.05, 0.045, 0.04))
-        ellipsoid(bm, (0.158 * sx, 0.0, 1.305), (0.044, 0.044, 0.062), rot=(0, 0.25 * sx, 0))   # deltoid
+        ellipsoid(bm, (0.066 * sx, 0.038, 0.9), (0.073, 0.067, 0.075))
+        ellipsoid(bm, (0.112 * sx, 0.0, 0.905), (0.058, 0.058, 0.08))  # hip flare
+        ellipsoid(bm, (0.126 * sx, 0.004, 1.322), (0.044, 0.04, 0.036))
+        ellipsoid(bm, (0.144 * sx, 0.0, 1.305), (0.037, 0.038, 0.056), rot=(0, 0.25 * sx, 0))   # deltoid
         ua0, ua1 = seg("upper_arm." + ("L" if sx > 0 else "R"))
         ellipsoid(bm, ua0.lerp(ua1, 0.45) + V((0, -0.006, 0)), (0.034, 0.034, 0.075), rot=(0, 0.17 * sx, 0))  # biceps
         kn = seg("shin." + ("L" if sx > 0 else "R"))[0]
         ellipsoid(bm, kn + V((0, -0.036, 0.004)), (0.034, 0.024, 0.036))   # kneecap
         # arm
         a0, a1 = seg("upper_arm." + ("L" if sx > 0 else "R"))
-        capsule(bm, a0, a1, 0.041, 0.031)
+        capsule(bm, a0, a1, 0.037, 0.029)
         f0, f1 = seg("forearm." + ("L" if sx > 0 else "R"))
         capsule(bm, f0, f1, 0.031, 0.022)
         ellipsoid(bm, f0.lerp(f1, 0.3), (0.034, 0.032, 0.06), rot=(0, 0.15 * sx, 0))
         # leg
         t0, t1 = seg("thigh." + ("L" if sx > 0 else "R"))
         capsule(bm, t0 + V((0.006 * sx, 0, 0)), t1, 0.076, 0.047)
-        ellipsoid(bm, t0.lerp(t1, 0.28), (0.074, 0.07, 0.12))
+        ellipsoid(bm, t0.lerp(t1, 0.28), (0.081, 0.073, 0.13))
         s0, s1 = seg("shin." + ("L" if sx > 0 else "R"))
         capsule(bm, s0, s1, 0.046, 0.028)
         ellipsoid(bm, s0.lerp(s1, 0.3) + V((0, 0.012, 0)), (0.046, 0.047, 0.095))
@@ -301,7 +302,7 @@ def build_armor(body):
         a, b = seg("forearm." + s)
         for i, (t0, t1) in enumerate([(0.14, 0.5), (0.54, 0.93)]):
             out.append(shell(f"forearm_plate_{s}{i}", a, b, t0, t1, -1.5, 1.5, (sx, 0.25, 0), reach=0.08))
-        out.append(shell(f"pauldron_{s}", (0.15 * sx, 0, 1.24), (0.16 * sx, 0, 1.4), 0.25, 0.92, -1.7, 1.7, (sx, 0, 0), reach=0.09, offset=0.006, thick=0.0045))
+        out.append(shell(f"pauldron_{s}", (0.137 * sx, 0, 1.25), (0.145 * sx, 0, 1.39), 0.3, 0.9, -1.5, 1.5, (sx, 0, 0), reach=0.08, offset=0.005, thick=0.004))
         out.append(shell(f"hip_plate_{s}", (0, 0, 0.85), (0, 0, 1.0), 0.05, 0.95, -0.6, 0.6, (sx, 0, 0), reach=0.18, material="ArmorBlack"))
     out.append(shell("chest_plate", (0, 0, 1.13), (0, 0, 1.33), 0.0, 1.0, -1.05, 1.05, (0, -1, 0), reach=0.16))
     for i, (t0, t1) in enumerate([(0.0, 0.3), (0.35, 0.64), (0.69, 1.0)]):
@@ -462,7 +463,7 @@ def build_hair(body):
         if e.length < 1 + margin:
             p = H0 + V((e.x * ER.x, e.y * ER.y, e.z * ER.z)) * ((1 + margin) / max(e.length, 1e-4))
         # the face window: nothing crosses the eyes, nose or mouth
-        if p.y < -0.025 and p.z < H0.z + 0.03 * HS and p.z > H0.z - 0.14 * HS and abs(p.x) < 0.088 * HS:
+        if p.y < -0.025 and p.z < H0.z + 0.01 * HS and p.z > H0.z - 0.14 * HS and abs(p.x) < 0.088 * HS:
             p = V((math.copysign(0.088 * HS, p.x if abs(p.x) > 1e-4 else 1), p.y, p.z))
         if 0.95 < p.z < 1.42 and p.y > -0.02:  # keep long hair off the back and shoulders
             r = math.hypot(p.x / 1.15, p.y)
@@ -486,10 +487,14 @@ def build_hair(body):
             else:
                 n = ell_normal(p)
                 near = ell(p).length < 1.12
+                rel = p - H0
+                outward = V((rel.x, rel.y, 0))
+                outward = outward.normalized() if outward.length > 1e-4 else V((0, 1, 0))
                 if kind == "bang":
                     want = (V((0, -0.55, -1)) + nrm * (0.5 - t * 0.4)).normalized()
                 else:
-                    want = (g + V((0, 0.06 if kind == "back" else -0.03, 0)) + sway * t).normalized()
+                    # flow out from the crown along the skull first, then fall
+                    want = (g + outward * max(0.0, 1.3 - t * 2.6) + V((0, 0.06 if kind == "back" else -0.03, 0)) + sway * t).normalized()
                 if near:  # slide along the skull instead of through it
                     want = (want - n * want.dot(n)).normalized() * 0.9 + n * 0.12
                 d = want.normalized()
@@ -521,7 +526,7 @@ def build_hair(body):
         locks.append((d, kind, L * (rs.uniform(0.6, 1.05) if fine else 1), rs.uniform(0.0035, 0.006) if fine else (rs.uniform(0.008, 0.015) if kind != "bang" else rs.uniform(0.01, 0.017))))
     for d, kind, L, w in locks:
         root, nrm = surface(d)
-        root = root + nrm * 0.004
+        root = root + nrm * 0.0025
         seed = rs.random()
         hang = grow(root, nrm, L, kind, False, random.Random(seed))
         flt = grow(root, nrm, L, kind, True, random.Random(seed))

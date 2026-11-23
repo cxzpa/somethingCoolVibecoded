@@ -380,7 +380,7 @@ function restyle(m) {
     case 'Glow': return new THREE.MeshBasicMaterial({ color: 0xff2a33 });
     case 'Face': return new THREE.MeshPhysicalMaterial({ color: 0xf3ebe6, map: faceTex, emissive: 0xffffff, emissiveMap: glowTex, emissiveIntensity: 0, roughness: 0.46, sheen: 0.5, sheenColor: 0xffe2da, sheenRoughness: 0.5, clearcoat: 0.12, clearcoatRoughness: 0.4, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
     case 'Hair': {
-      const h = new THREE.MeshPhysicalMaterial({ color: 0xbfc5cf, roughness: 0.38, sheen: 0.6, sheenColor: 0xe8f4ff, sheenRoughness: 0.32, clearcoat: 0.25, side: THREE.DoubleSide });
+      const h = new THREE.MeshPhysicalMaterial({ color: 0xc9cfd8, map: hairTex, roughness: 0.4, sheen: 0.6, sheenColor: 0xe8f4ff, sheenRoughness: 0.32, clearcoat: 0.25, side: THREE.DoubleSide });
       h.defines = { USE_UV: '' };
       h.onBeforeCompile = (sh) => {
         sh.uniforms.uT = hairTime; sh.uniforms.uWave = hairWave; sh.uniforms.uGrav = hairGrav;
@@ -401,6 +401,147 @@ function restyle(m) {
     }
     default: return m;
   }
+}
+
+// ---------------------------------------------------------------- hair strand texture
+const hairTex = (() => {
+  const c = document.createElement('canvas'); c.width = 128; c.height = 512; const x = c.getContext('2d');
+  x.fillStyle = '#ffffff'; x.fillRect(0, 0, 128, 512);
+  for (let i = 0; i < 70; i++) { // fine strands running along the lock
+    const sx = Math.random() * 128, a = 0.06 + Math.random() * 0.22;
+    x.strokeStyle = `rgba(70,80,96,${a})`; x.lineWidth = 0.5 + Math.random() * 1.8;
+    x.beginPath(); x.moveTo(sx, 0); x.bezierCurveTo(sx + 4, 170, sx - 4, 340, sx + Math.random() * 6 - 3, 512); x.stroke();
+  }
+  for (let i = 0; i < 18; i++) { x.strokeStyle = 'rgba(255,255,255,0.6)'; x.lineWidth = 1; const sx = Math.random() * 128; x.beginPath(); x.moveTo(sx, 60); x.lineTo(sx, 400); x.stroke(); }
+  let g = x.createLinearGradient(0, 0, 0, 170); g.addColorStop(0, 'rgba(55,60,74,0.55)'); g.addColorStop(1, 'rgba(55,60,74,0)'); x.fillStyle = g; x.fillRect(0, 0, 128, 170);  // darker roots
+  g = x.createLinearGradient(0, 400, 0, 512); g.addColorStop(0, 'rgba(143,230,232,0)'); g.addColorStop(1, 'rgba(143,230,232,0.55)'); x.fillStyle = g; x.fillRect(0, 400, 128, 112); // ice tips
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.flipY = false; t.wrapS = THREE.RepeatWrapping; t.repeat.set(2, 1); t.anisotropy = 8;
+  return t;
+})();
+
+// ---------------------------------------------------------------- cybersigil wings
+// Each wing is a fan of sharp chrome sigil blades (barbs, hooked tips, a forked prong) with a glowing
+// circuit vein, mounted on the chest bone so they follow her pose.
+const WING = {
+  chrome: new THREE.MeshStandardMaterial({ color: 0xdfe3e8, metalness: 1, roughness: 0.13 }),
+  black: new THREE.MeshStandardMaterial({ color: 0x15161a, metalness: 1, roughness: 0.22 }),
+  vein: new THREE.LineBasicMaterial({ color: 0x8fe6e8, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }),
+};
+function bladeGeometry(L, w0, bend, barbs, fork, seed) {
+  let s = seed; const rr = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+  const spine = (u) => new THREE.Vector2(u * L, Math.sin(u * Math.PI * 0.9) * bend * L + Math.pow(u, 3) * -0.06 * L);
+  const nrm = (u) => { const a = spine(Math.max(0, u - 0.01)), b = spine(Math.min(1, u + 0.01)); const d = b.sub(a).normalize(); return new THREE.Vector2(-d.y, d.x); };
+  const width = (u) => w0 * Math.pow(1 - u, 0.85) + 0.0008;
+  const edge = (u, sgn) => spine(u).add(nrm(u).multiplyScalar(sgn * width(u) / 2));
+  const N = 40, top = [], bot = [];
+  for (let i = 0; i <= N; i++) {
+    const u = i / N;
+    for (const b of barbs) {
+      if (Math.abs(u - b.u) < 0.5 / N) {
+        const list = b.side > 0 ? top : bot;
+        const back = spine(b.u - 0.05);
+        const apex = spine(b.u).add(nrm(b.u).multiplyScalar(b.side * (width(b.u) / 2 + b.len))).add(back.clone().sub(spine(b.u)).normalize().multiplyScalar(b.len * 0.9));
+        list.push(edge(b.u - 0.035, b.side), apex);
+      }
+    }
+    if (fork && Math.abs(u - fork.u) < 0.5 / N) {
+      const d = spine(fork.u + 0.02).sub(spine(fork.u)).normalize();
+      const n = nrm(fork.u).multiplyScalar(fork.side);
+      const tip = spine(fork.u).add(d.clone().multiplyScalar(fork.len)).add(n.clone().multiplyScalar(fork.len * 0.55));
+      (fork.side > 0 ? top : bot).push(edge(fork.u, fork.side), tip, edge(fork.u + 0.03, fork.side));
+    }
+    top.push(edge(u, 1)); bot.push(edge(u, -1));
+  }
+  const shape = new THREE.Shape([...top, ...bot.reverse()]);
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.0035, bevelEnabled: true, bevelThickness: 0.0012, bevelSize: 0.0009, bevelSegments: 1, curveSegments: 2 });
+  geo.translate(0, 0, -0.00175);
+  geo.computeVertexNormals();
+  const vein = [];
+  for (let i = 1; i < 36; i++) { const p = spine(i / 36 * 0.94); vein.push(new THREE.Vector3(p.x, p.y, 0.0034), ); }
+  return { geo, vein };
+}
+function buildWing(side) {
+  const wing = new THREE.Group();
+  const blades = [];
+  const N = 8;
+  for (let k = 0; k < N; k++) {
+    const f = k / (N - 1);
+    const L = 0.8 - 0.34 * f + 0.08 * Math.sin(f * Math.PI);
+    const seed = 101 + k * 37;
+    const barbs = [
+      { u: 0.3 + 0.04 * (k % 2), side: 1, len: 0.04 + 0.014 * (k % 3) },
+      { u: 0.5, side: -1, len: 0.032 },
+      { u: 0.7, side: 1, len: 0.028 },
+      { u: 0.84, side: -1, len: 0.018 },
+    ];
+    const fork = k % 2 === 0 ? { u: 0.6, side: -1, len: 0.11 * L / 0.8 } : null;
+    const { geo, vein } = bladeGeometry(L, 0.052 - 0.016 * f, 0.11 + 0.06 * (1 - f), barbs, fork, seed);
+    const pivot = new THREE.Group();
+    const mesh = new THREE.Mesh(geo, k % 3 === 1 ? WING.black : WING.chrome);
+    pivot.add(mesh);
+    const v = new THREE.Line(new THREE.BufferGeometry().setFromPoints(vein), WING.vein); pivot.add(v);
+    const v2 = new THREE.Line(new THREE.BufferGeometry().setFromPoints(vein.map(p => new THREE.Vector3(p.x, p.y, -p.z))), WING.vein); pivot.add(v2);
+    pivot.userData = { spread: 1.5 - 2.0 * f, fold: -1.25 - 0.3 * f, phase: k * 0.7 };
+    pivot.position.z = (k - N / 2) * 0.0025; // stacked, so blades never z-fight
+    wing.add(pivot); blades.push(pivot);
+  }
+  // a small spiked sigil disc where the blades meet
+  const hub = new THREE.Mesh(new THREE.TorusGeometry(0.036, 0.008, 8, 32), WING.chrome); wing.add(hub);
+  wing.userData = { blades, side };
+  return wing;
+}
+function buildEmblem() {
+  const g = new THREE.Group();
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.004, 8, 48), WING.chrome); g.add(ring);
+  const spike = new THREE.ConeGeometry(0.005, 0.05, 6); spike.translate(0, 0.025, 0);
+  for (let i = 0; i < 12; i++) { const m = new THREE.Mesh(spike, WING.chrome); m.rotation.z = (i / 12) * Math.PI * 2; m.position.set(Math.cos((i / 12) * Math.PI * 2 + Math.PI / 2) * 0.045, Math.sin((i / 12) * Math.PI * 2 + Math.PI / 2) * 0.045, 0); m.scale.y = i % 3 ? 0.6 : 1.3; g.add(m); }
+  const bar = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.14, 0.006), WING.black); g.add(bar);
+  const cross = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.008, 0.006), WING.black); cross.position.y = 0.025; g.add(cross);
+  const core = new THREE.Mesh(new THREE.OctahedronGeometry(0.012), new THREE.MeshBasicMaterial({ color: 0xff2a33 })); g.add(core);
+  return g;
+}
+// mount an object on a bone, given where it should sit in the model's bind pose (glTF space, Y up)
+function mountOnBone(bone, skinned, obj, pos, quat = new THREE.Quaternion()) {
+  const i = skinned.skeleton.bones.indexOf(bone);
+  const local = skinned.skeleton.boneInverses[i].clone().multiply(new THREE.Matrix4().compose(pos, quat, new THREE.Vector3(1, 1, 1)));
+  local.decompose(obj.position, obj.quaternion, obj.scale);
+  bone.add(obj);
+}
+let WINGS = null;
+function setupWings(bones, root) {
+  const chest = bones.chest; let skinned = null;
+  root.traverse((o) => { if (!skinned && o.isSkinnedMesh && o.skeleton.bones.includes(chest)) skinned = o; });
+  if (!chest || !skinned) return;
+  const wings = [-1, 1].map((side) => {
+    const mount = new THREE.Group();
+    // Blender (x, y-back, z-up) -> glTF (x, z, -y): the back of the ribcage at chest height
+    mountOnBone(chest, skinned, mount, new THREE.Vector3(side * 0.03, 1.27, -0.088));
+    const mirror = new THREE.Group(); mirror.scale.x = side; mount.add(mirror);
+    const w = buildWing(side); mirror.add(w);
+    return w;
+  });
+  const emblem = buildEmblem();
+  mountOnBone(chest, skinned, emblem, new THREE.Vector3(0, 1.22, -0.095), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI));
+  const st = { spread: 0.55, glow: 0.3 };
+  WINGS = {
+    update(t, dt, awake, drained, alarm) {
+      const k = 1 - Math.exp(-dt * 2.2);
+      st.spread = lerp(st.spread, drained ? 0.06 : awake ? 1 : 0.55, k);
+      st.glow = lerp(st.glow, drained ? 0 : awake ? 1 : 0.28 + 0.12 * Math.sin(t * 1.3), k * 1.5);
+      wings.forEach((w) => {
+        // fold back behind her when closed, open flat when spread
+        w.rotation.y = lerp(-1.05, -0.18, st.spread);
+        w.rotation.x = lerp(0.35, 0.05, st.spread);
+        w.userData.blades.forEach((b) => {
+          const u = b.userData;
+          b.rotation.z = lerp(u.fold, u.spread, st.spread) + (reduceMotion ? 0 : Math.sin(t * 0.9 + u.phase) * 0.035 * (0.4 + st.spread));
+        });
+      });
+      const flick = alarm ? (Math.sin(t * 22) > 0 ? 1 : 0.2) : 1;
+      WING.vein.color.setHex(alarm ? 0xff2a33 : 0x8fe6e8);
+      WING.vein.opacity = alarm ? 0.9 * flick : 0.15 + st.glow * 0.85;
+    },
+  };
 }
 
 function setupNox(gltf) {
@@ -486,8 +627,9 @@ function setupNox(gltf) {
     },
   };
   drawFace(0);
+  setupWings(bones, root);
   log('subject model loaded', 'c');
-  window.__nox = { root, scene, camera, faceCv, drawFace, S, faceTex, orbit, headFocus, lookAt }; // test hook
+  window.__nox = { root, scene, camera, S, orbit }; // test hook
 }
 new GLTFLoader().load('assets/nox.glb', setupNox, undefined, (e) => { console.warn('[vessel] nox.glb unavailable, using the procedural doll', e); });
 
@@ -631,6 +773,7 @@ function frame() {
   // eyes open when tapped, and the head turns toward the camera
   const awake = t < S.eyesUntil && lv > 0.3;
   S.eyes = lerp(S.eyes, awake ? 1 : 0, 1 - Math.exp(-dt * 5)); // time-based, same speed on every device
+  if (WINGS) WINGS.update(t, dt, awake, sub < 0.3, S.mode !== 'idle');
   if (NOX) NOX.face(S.eyes, camera.position); else {
   J.eyes.forEach(e => { e.scale.y = lerp(0.18, 0.75, S.eyes); });
   M.eye.color.setRGB(lerp(0.1, 0.56, S.eyes), lerp(0.11, 0.9, S.eyes), lerp(0.12, 0.92, S.eyes));
