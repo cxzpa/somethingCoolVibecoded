@@ -428,8 +428,18 @@ function setupNox(gltf) {
   if (ports.length >= 4) cables.forEach((c, i) => { c.port = ports[i]; });
   const qw = new THREE.Quaternion(), ax = new THREE.Vector3(), q = new THREE.Quaternion(), hp = new THREE.Vector3();
   const head = bones.head, neck = bones.neck;
+  // The mixer only writes a bone when its pose value changes, so anything added on top (the look-at)
+  // would pile up frame after frame. Re-sample neck and head from the clip every frame instead.
+  const lookBones = [neck, head].filter(Boolean).map((b) => {
+    const tr = clip && clip.tracks.find((t) => t.name === `${b.name}.quaternion`);
+    return { b, interp: tr ? tr.createInterpolant() : null, rest: b.quaternion.clone() };
+  });
   NOX = {
-    pose(k) { if (action) { action.time = k * clip.duration * 0.999; mixer.update(0); } },
+    pose(k) {
+      const time = clip ? k * clip.duration * 0.999 : 0;
+      if (action) { action.time = time; mixer.update(0); }
+      lookBones.forEach(({ b, interp, rest }) => { if (interp) b.quaternion.fromArray(interp.evaluate(time)); else b.quaternion.copy(rest); });
+    },
     hair(t, sub) {
       hairTime.value = t; hairWave.value = sub;
       if (hairMesh) hairMesh.morphTargetInfluences[hairMesh.morphTargetDictionary.float] = sub * 0.12;
@@ -447,11 +457,11 @@ function setupNox(gltf) {
         const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(qw); const cur = Math.atan2(fwd.x, fwd.z);
         let d = yaw - cur; d = Math.atan2(Math.sin(d), Math.cos(d));
         ax.set(0, 1, 0).applyQuaternion(qw.clone().invert());
-        q.setFromAxisAngle(ax, clamp(d, -0.8, 0.8) * open * (i ? 0.45 : 0.35)); b.quaternion.multiply(q);
+        q.setFromAxisAngle(ax, clamp(d, -0.8, 0.8) * open * (i ? 0.4 : 0.3)); b.quaternion.multiply(q);
         // and lift the chin a little
         const right = new THREE.Vector3(1, 0, 0).applyQuaternion(qw);
         ax.copy(right).applyQuaternion(qw.clone().invert());
-        q.setFromAxisAngle(ax, -0.8 * open * (i ? 0.6 : 0.4)); b.quaternion.multiply(q);
+        q.setFromAxisAngle(ax, -0.35 * open * (i ? 0.6 : 0.4)); b.quaternion.multiply(q);
       });
     },
   };
