@@ -2,7 +2,7 @@
 
 *A network for things with too many wings.*
 
-An interactive angelpunk / metalheart transmission, built as a single static page. No build step, no dependencies: every image, shape and sound is generated in code.
+An interactive angelpunk / metalheart transmission: a 3D megastructure menu and six rooms, all static files. No build step: every image, shape and sound is generated in code.
 
 ## Rooms
 
