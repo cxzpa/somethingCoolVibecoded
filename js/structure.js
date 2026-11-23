@@ -44,18 +44,18 @@ renderer.toneMappingExposure = 1.05;
 stage.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x070708);
-scene.fog = new THREE.FogExp2(0x070708, 0.0085);
+scene.background = new THREE.Color(0x040809);
+scene.fog = new THREE.FogExp2(0x061012, 0.0075);
 const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-scene.environmentIntensity = 0.5;
+scene.environmentIntensity = 0.32;
 
 const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 900);
 
 // ---------------------------------------------------------------- materials
 const M = {
-  chrome: new THREE.MeshStandardMaterial({ color: 0xe8eaee, metalness: 1, roughness: 0.14 }),
-  steel: new THREE.MeshStandardMaterial({ color: 0x2a2c31, metalness: 1, roughness: 0.38 }),
+  chrome: new THREE.MeshStandardMaterial({ color: 0xa9d6d6, metalness: 1, roughness: 0.08 }),
+  steel: new THREE.MeshStandardMaterial({ color: 0x1d2a2c, metalness: 1, roughness: 0.3 }),
   dark: new THREE.MeshStandardMaterial({ color: 0x0c0c0f, metalness: 0.6, roughness: 0.5 }),
   red: new THREE.MeshStandardMaterial({ color: 0x8a0a10, metalness: 0.2, roughness: 0.3, emissive: 0x5a0006, emissiveIntensity: 0.6 }),
   glowRed: new THREE.MeshBasicMaterial({ color: 0xff2a33 }),
@@ -122,61 +122,149 @@ function truss(A, B, s0 = 1.6, s1 = 0.8, set = 'steel') {
   }
 }
 
-// ---------------------------------------------------------------- the structure
+// ---------------------------------------------------------------- the structure: a metalheart knot
+// Liquid-chrome tentacles converge on a cluster of chrome spheres; glass shards orbit; grid panels,
+// scan rings and lightning hang behind it like layers in a 2001 desktop wallpaper.
 const world = new THREE.Group();
 scene.add(world);
+const arcs = []; // things that spin slowly (shard rings)
 
-// central spine: stacked rings, ribs, and a chrome core
-(function core() {
-  const ringGeo = new THREE.TorusGeometry(3.2, 0.22, 10, 48);
-  const n = 54;
-  const rings = new THREE.InstancedMesh(ringGeo, M.chrome, n);
+// a tube whose radius tapers along its length (TubeGeometry can't)
+function taperTube(curve, r0, r1, segs = 96, radial = 14, ease = 1.4) {
+  const frames = curve.computeFrenetFrames(segs, false);
+  const pos = [], idx = [];
+  for (let i = 0; i <= segs; i++) {
+    const t = i / segs, P = curve.getPointAt(t);
+    const r = r1 + (r0 - r1) * Math.pow(1 - t, ease) * (1 + 0.06 * Math.sin(t * 40));
+    const N = frames.normals[i], B = frames.binormals[i];
+    for (let j = 0; j <= radial; j++) {
+      const a = (j / radial) * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
+      pos.push(P.x + r * (c * N.x + s * B.x), P.y + r * (c * N.y + s * B.y), P.z + r * (c * N.z + s * B.z));
+    }
+  }
+  for (let i = 0; i < segs; i++) for (let j = 0; j < radial; j++) {
+    const a = i * (radial + 1) + j, b = a + radial + 1;
+    idx.push(a, b, a + 1, b, b + 1, a + 1);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx); g.computeVertexNormals();
+  return g;
+}
+const randDir = () => new THREE.Vector3(R(-1, 1), R(-0.8, 0.8), R(-1, 1)).normalize();
+// keep loose tentacles out of the docks' sightlines so no camera ends up inside chrome
+const dockDirs = NODES.filter(n => n.pos).map(n => new THREE.Vector3(...n.pos).normalize());
+const freeDir = () => { for (let k = 0; k < 40; k++) { const d = randDir(); if (dockDirs.every(v => v.dot(d) < 0.78)) return d; } return randDir(); };
+// a sweeping curve from near the core out to `end`, bending sideways like the references
+function sweep(start, end, bend = 0.5) {
+  const d = end.clone().sub(start), L = d.length();
+  const side = new THREE.Vector3().crossVectors(d, UP).normalize();
+  const c1 = start.clone().addScaledVector(d, 0.3).addScaledVector(side, L * bend * R(-1, 1)).addScaledVector(UP, L * R(-0.3, 0.3));
+  const c2 = start.clone().addScaledVector(d, 0.7).addScaledVector(side, L * bend * R(-0.6, 0.6)).addScaledVector(UP, L * R(-0.25, 0.25));
+  return new THREE.CatmullRomCurve3([start, c1, c2, end], false, 'catmullrom', 0.5);
+}
+const tips = []; // tentacle ends, used by the lightning
+
+(function knot() {
+  // the cluster of chrome spheres at the heart
+  for (let i = 0; i < 16; i++) {
+    const s = new THREE.Mesh(new THREE.SphereGeometry(R(1.2, 4.2), 40, 28), i % 5 === 0 ? M.steel : M.chrome);
+    s.position.copy(randDir().multiplyScalar(R(0, 6)));
+    world.add(s);
+  }
+  // spikes bursting out of the cluster
+  const spikeGeo = new THREE.ConeGeometry(0.35, 1, 10); spikeGeo.translate(0, 0.5, 0);
+  const spikes = new THREE.InstancedMesh(spikeGeo, M.chrome, 34);
   const m = new THREE.Matrix4();
-  for (let i = 0; i < n; i++) {
-    const y = -75 + i * 2.8;
-    const s = 1 + 0.25 * Math.sin(i * 0.7) + (i % 9 === 0 ? 0.6 : 0);
-    m.compose(new THREE.Vector3(0, y, 0), new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0)), new THREE.Vector3(s, s, 1));
-    rings.setMatrixAt(i, m);
+  for (let i = 0; i < 34; i++) { const d = randDir(); m.compose(d.clone().multiplyScalar(R(3, 6)), new THREE.Quaternion().setFromUnitVectors(UP, d), new THREE.Vector3(1, R(4, 14), 1)); spikes.setMatrixAt(i, m); }
+  world.add(spikes);
+  // coils wrapped around the knot
+  for (let k = 0; k < 7; k++) {
+    const pts = [], r = R(6, 11), tilt = new THREE.Euler(R(0, 3), R(0, 3), R(0, 3)), turns = R(0.6, 1.4);
+    for (let i = 0; i <= 40; i++) { const a = (i / 40) * Math.PI * 2 * turns; pts.push(new THREE.Vector3(Math.cos(a) * r, Math.sin(a * 2) * 2, Math.sin(a) * r).applyEuler(tilt)); }
+    world.add(new THREE.Mesh(taperTube(new THREE.CatmullRomCurve3(pts), R(0.5, 1.1), 0.08, 120, 12, 0.6), k % 3 ? M.chrome : M.steel));
   }
-  world.add(rings);
-  for (let k = 0; k < 10; k++) {
-    const a = (k / 10) * Math.PI * 2, r = 2.6;
-    beam(new THREE.Vector3(Math.cos(a) * r, -78, Math.sin(a) * r), new THREE.Vector3(Math.cos(a) * r, 78, Math.sin(a) * r), k % 2 ? 0.18 : 0.32, k % 2 ? 'steel' : 'chrome');
+  // thick tentacles sweeping into the dark, thinner wires between them
+  for (let i = 0; i < 26; i++) {
+    const d = freeDir(); const start = d.clone().multiplyScalar(4);
+    const end = d.clone().multiplyScalar(R(55, 140)).add(new THREE.Vector3(R(-6, 6), R(-8, 8), R(-6, 6)));
+    world.add(new THREE.Mesh(taperTube(sweep(start, end, R(0.3, 0.8)), R(1.4, 3.2), R(0.05, 0.3)), i % 4 === 0 ? M.steel : M.chrome));
+    tips.push(end);
+    if (R(0, 1) < 0.35) { const drop = new THREE.Mesh(new THREE.SphereGeometry(R(0.6, 1.6), 24, 16), M.chrome); drop.position.copy(end); world.add(drop); }
   }
-  const coreMesh = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.3, 160, 24, 1, true), M.dark);
-  world.add(coreMesh);
-  // glowing seams on the core
-  for (let i = 0; i < 18; i++) {
-    const y = R(-70, 70);
-    const seam = new THREE.Mesh(new THREE.TorusGeometry(1.36, 0.035, 6, 40), rnd() < 0.3 ? M.glowRed : M.glowIce);
-    seam.rotation.x = Math.PI / 2; seam.position.y = y;
-    world.add(seam);
+  for (let i = 0; i < 60; i++) {
+    const d = freeDir(); const end = d.clone().multiplyScalar(R(30, 110));
+    world.add(new THREE.Mesh(taperTube(sweep(d.clone().multiplyScalar(3), end, R(0.4, 1)), R(0.12, 0.4), 0.03, 80, 6), M.chrome));
   }
 })();
 
-// abstract chrome arcs orbiting the spine (the Metalheart forms)
-const arcs = [];
-for (let i = 0; i < 7; i++) {
-  const r = R(14, 58);
-  const arc = new THREE.Mesh(new THREE.TorusGeometry(r, R(0.12, 0.6), 8, 160, R(1.2, 4.2)), i % 3 ? M.chrome : M.steel);
-  arc.rotation.set(R(-1.2, 1.2), R(0, Math.PI * 2), R(-0.6, 0.6));
-  arc.position.y = R(-30, 30);
-  arc.userData.spin = R(-0.04, 0.04);
-  world.add(arc); arcs.push(arc);
-}
-
-// decoy arms reaching into the dark
-for (let i = 0; i < 16; i++) {
-  const a = R(0, Math.PI * 2), y = R(-60, 60);
-  const L = R(25, 70);
-  const A = new THREE.Vector3(Math.cos(a) * 3, y, Math.sin(a) * 3);
-  const B = new THREE.Vector3(Math.cos(a) * L, y + R(-20, 20), Math.sin(a) * L);
-  truss(A, B, R(1, 2), R(0.4, 1));
-  if (rnd() < 0.6) box(B, new THREE.Vector3(R(2, 7), R(2, 9), R(2, 7)), new THREE.Euler(0, R(0, 3), 0), 'dark');
-  if (rnd() < 0.35) {
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(R(2, 5), 0.15, 8, 48), M.chrome);
-    ring.position.copy(B); ring.lookAt(A); world.add(ring);
+// glass shards and droplets orbiting in rings
+(function shards() {
+  const glass = new THREE.MeshPhysicalMaterial({ color: 0x9fe8ea, metalness: 0, roughness: 0.04, transmission: 0.9, thickness: 1.2, ior: 1.45, transparent: true, opacity: 0.9, envMapIntensity: 1.5 });
+  for (let r = 0; r < 3; r++) {
+    const ring = new THREE.Group(); ring.rotation.set(R(-1, 1), R(0, 3), R(-0.5, 0.5)); ring.userData.spin = R(-0.05, 0.05);
+    for (let i = 0; i < 26; i++) {
+      const a = R(0, Math.PI * 2), rad = R(16, 46);
+      const geo = R(0, 1) < 0.6 ? new THREE.OctahedronGeometry(1, 0) : new THREE.IcosahedronGeometry(0.6, 1);
+      const s = new THREE.Mesh(geo, glass);
+      s.position.set(Math.cos(a) * rad, R(-4, 4), Math.sin(a) * rad);
+      s.scale.set(R(0.3, 1.2), R(1, 6), R(0.3, 1.2)); s.rotation.set(R(0, 3), R(0, 3), R(0, 3));
+      ring.add(s);
+    }
+    world.add(ring); arcs.push(ring);
   }
+})();
+
+// flat graphic layers behind the knot: grids, scan rings, data strips, captions
+function layerTex(draw, w = 1024, h = 1024) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d');
+  draw(x, w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+const TEAL = 'rgba(120,230,225,';
+const layers = [];
+function addLayer(tex, w, h, pos, rotY, opacity = 0.55) {
+  const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false });
+  const p = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat); p.position.copy(pos); p.rotation.y = rotY; world.add(p); layers.push(p); return p;
+}
+const gridTex = layerTex((x, w, h) => {
+  x.strokeStyle = TEAL + '0.5)'; x.lineWidth = 1;
+  for (let i = 0; i <= w; i += 16) { x.globalAlpha = i % 128 ? 0.35 : 0.9; x.beginPath(); x.moveTo(i, 0); x.lineTo(i, h); x.stroke(); x.beginPath(); x.moveTo(0, i); x.lineTo(w, i); x.stroke(); }
+  x.globalAlpha = 1; x.fillStyle = TEAL + '0.25)'; for (let k = 0; k < 40; k++) x.fillRect(Math.floor(Math.random() * 64) * 16, Math.floor(Math.random() * 64) * 16, 16 * (1 + Math.floor(Math.random() * 6)), 16);
+});
+const scanTex = layerTex((x, w, h) => {
+  x.translate(w / 2, h / 2); x.strokeStyle = TEAL + '0.8)';
+  for (let r = 60; r < 500; r += 38) { x.lineWidth = r % 3 ? 1 : 3; x.beginPath(); x.arc(0, 0, r, 0, Math.PI * 2); x.stroke(); }
+  for (let a = 0; a < 120; a++) { const t = a / 120 * Math.PI * 2; x.lineWidth = 1; x.beginPath(); x.moveTo(Math.cos(t) * 120, Math.sin(t) * 120); x.lineTo(Math.cos(t) * 500, Math.sin(t) * 500); x.globalAlpha = a % 10 ? 0.25 : 0.9; x.stroke(); }
+});
+const stripTex = layerTex((x, w, h) => {
+  x.fillStyle = TEAL + '0.18)'; x.fillRect(0, h * 0.35, w, h * 0.3);
+  x.fillStyle = TEAL + '0.9)';
+  for (let i = 0; i < 70; i++) x.fillRect(i * 30 + 10, h * 0.47, 18, 10);
+  x.font = '700 64px "Syncopate", sans-serif'; x.fillText('ANGEL LINE', 30, h * 0.44);
+  x.font = '22px "Space Mono", monospace'; x.fillText('METALHEART EXPERIMENT // NODE 00 // 構造体 // EXCLUSIVELY TRANSMITTED SINCE 1998', 30, h * 0.6);
+  x.fillText('> structure.core  > tentacles: 26  > wires: 60  > halo uplink: holy', 30, h * 0.64);
+}, 2048, 512);
+addLayer(gridTex, 120, 120, new THREE.Vector3(10, 4, -60), 0.2, 0.32);
+addLayer(gridTex, 90, 90, new THREE.Vector3(-55, -10, -20), 1.2, 0.25);
+addLayer(scanTex, 110, 110, new THREE.Vector3(-6, 2, -38), 0.05, 0.5);
+addLayer(scanTex, 70, 70, new THREE.Vector3(40, 20, 30), -2.2, 0.35);
+addLayer(stripTex, 140, 35, new THREE.Vector3(0, -8, -28), 0, 0.7);
+addLayer(stripTex, 100, 25, new THREE.Vector3(-30, 26, 40), 2.6, 0.4);
+
+// lightning between tentacle tips and the knot, redrawn every few frames
+const bolts = [];
+const boltMat = new THREE.LineBasicMaterial({ color: 0xbff7f4, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+for (let i = 0; i < 7; i++) { const l = new THREE.Line(new THREE.BufferGeometry(), boltMat); l.frustumCulled = false; world.add(l); bolts.push(l); }
+function zap() {
+  bolts.forEach((b) => {
+    if (Math.random() < 0.55) { b.visible = false; return; }
+    b.visible = true;
+    const a = tips[Math.floor(Math.random() * tips.length)].clone().multiplyScalar(R(0.2, 0.6));
+    const z = Math.random() < 0.5 ? new THREE.Vector3() : tips[Math.floor(Math.random() * tips.length)].clone().multiplyScalar(R(0.2, 0.6));
+    const pts = []; const n = 22;
+    for (let k = 0; k <= n; k++) { const p = a.clone().lerp(z, k / n); if (k && k < n) p.add(randDir().multiplyScalar(R(0.5, 3.5))); pts.push(p); }
+    b.geometry.dispose(); b.geometry = new THREE.BufferGeometry().setFromPoints(pts);
+  });
 }
 
 // ---------------------------------------------------------------- docks (one sculpture per room)
@@ -223,7 +311,7 @@ function dockVessel(g) {
     const pts = [new THREE.Vector3(R(-1.5, 1.5), 3.6, R(-1.5, 1.5)), new THREE.Vector3(R(-0.6, 0.6), 2, R(-0.6, 0.6)), new THREE.Vector3(0, 0.6, -0.3)];
     g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(new THREE.CatmullRomCurve3(pts).getPoints(20)), M.cable));
   }
-  const glow = new THREE.PointLight(0x8fe6e8, 30, 18, 2); g.add(glow);
+  const glow = new THREE.PointLight(0x8fe6e8, 10, 12, 2); g.add(glow);
 }
 
 function screenTex(i) {
@@ -299,10 +387,11 @@ const builders = { halo: dockHalo, vessel: dockVessel, signal: dockSignal, flash
 NODES.forEach((n) => {
   if (!n.pos) return;
   const p = new THREE.Vector3(...n.pos);
-  // the long arm from the spine out to the dock
-  const A = new THREE.Vector3(0, p.y * 0.6, 0);
-  truss(A, p.clone().multiplyScalar(0.93), 2.4, 1.2, 'steel');
-  const g = new THREE.Group(); g.position.copy(p);
+  // a thick tentacle from the knot out to the dock
+  const start = p.clone().normalize().multiplyScalar(5);
+  world.add(new THREE.Mesh(taperTube(sweep(start, p.clone().multiplyScalar(0.94), 0.08), 2.6, 0.7, 140, 16, 0.9), M.chrome));
+  tips.push(p.clone().multiplyScalar(0.9));
+  const g = new THREE.Group(); g.position.copy(p); g.scale.setScalar(1.5);
   builders[n.id](g);
   const light = new THREE.PointLight(n.color, 60, 30, 2); light.position.set(0, 3, 4); g.add(light);
   world.add(g);
@@ -310,31 +399,24 @@ NODES.forEach((n) => {
   n.vec = p;
 });
 
-// hanging cables between arms
-for (let i = 0; i < 70; i++) {
-  const a = new THREE.Vector3(R(-50, 50), R(-40, 60), R(-50, 50));
-  const b = a.clone().add(new THREE.Vector3(R(-18, 18), R(-4, 4), R(-18, 18)));
-  const sag = R(4, 20);
-  const pts = [];
-  for (let k = 0; k <= 24; k++) { const t = k / 24; const p = a.clone().lerp(b, t); p.y -= sag * 4 * t * (1 - t); pts.push(p); }
-  world.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), M.cable));
-}
-
 // drifting dust
 const dust = (() => {
   const n = 2400, pos = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) { pos[i * 3] = R(-120, 120); pos[i * 3 + 1] = R(-90, 90); pos[i * 3 + 2] = R(-120, 120); }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  const p = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xc9ccd2, size: 0.18, transparent: true, opacity: 0.55, sizeAttenuation: true, depthWrite: false }));
+  const dot = document.createElement('canvas'); dot.width = dot.height = 32; const dx = dot.getContext('2d');
+  const rg = dx.createRadialGradient(16, 16, 0, 16, 16, 16); rg.addColorStop(0, 'rgba(255,255,255,1)'); rg.addColorStop(1, 'rgba(255,255,255,0)'); dx.fillStyle = rg; dx.fillRect(0, 0, 32, 32);
+  const p = new THREE.Points(g, new THREE.PointsMaterial({ color: 0x9fe8e4, size: 0.14, map: new THREE.CanvasTexture(dot), transparent: true, opacity: 0.6, sizeAttenuation: true, depthWrite: false }));
   scene.add(p); return p;
 })();
 
 flushBeams();
 
 // light
-scene.add(new THREE.AmbientLight(0x404048, 0.4));
+scene.add(new THREE.AmbientLight(0x2a4446, 0.5));
 const key = new THREE.DirectionalLight(0xffffff, 1.1); key.position.set(30, 60, 40); scene.add(key);
-const rim = new THREE.DirectionalLight(0x8fe6e8, 0.8); rim.position.set(-40, -10, -30); scene.add(rim);
+const rim = new THREE.DirectionalLight(0x8fe6e8, 1.4); rim.position.set(-40, -10, -30); scene.add(rim);
+const coreGlow = new THREE.PointLight(0x8fe6e8, 600, 90, 1.6); scene.add(coreGlow);
 
 // ---------------------------------------------------------------- post
 const composer = new EffectComposer(renderer);
@@ -350,7 +432,7 @@ function poseFor(n) {
   const out = new THREE.Vector3(p.x, 0, p.z).normalize();
   const side = new THREE.Vector3().crossVectors(UP, out).normalize();
   const narrow = innerWidth < 820;
-  const pos = p.clone().addScaledVector(out, narrow ? 19 : 16).addScaledVector(UP, 2.5).addScaledVector(side, narrow ? 0 : 2);
+  const pos = p.clone().addScaledVector(out, narrow ? 20 : 17).addScaledVector(UP, 2.5).addScaledVector(side, narrow ? 0 : 2);
   // keep the dock left of centre so the panel sits on the right
   const look = p.clone().addScaledVector(side, narrow ? 0 : 7).addScaledVector(UP, narrow ? -4 : 0.3);
   return { pos, look };
@@ -493,6 +575,8 @@ function frame() {
     world.rotation.y = Math.sin(t * 0.03) * 0.04;
     arcs.forEach(a => { a.rotation.y += a.userData.spin * 0.016; });
     dust.rotation.y = t * 0.004;
+    if (Math.floor(t * 12) !== zap.last) { zap.last = Math.floor(t * 12); zap(); }
+    layers.forEach((l, i) => { l.material.opacity = l.userData.o ?? (l.userData.o = l.material.opacity); l.material.opacity = l.userData.o * (0.85 + 0.15 * Math.sin(t * 2 + i)); });
     const h = docks.halo; if (h) { h.userData.spin.rotation.z = t * 0.3; h.userData.spin2.rotation.y = t * 0.3; h.userData.bob.rotation.y = t; h.userData.bob.position.y = Math.sin(t * 1.4) * 0.3; }
     const v = docks.vessel; if (v) { v.userData.bob.position.y = Math.sin(t * 0.8) * 0.25; v.userData.bob.rotation.y = t * 0.2; }
     const s = docks.signal; if (s) s.userData.monitors.forEach(m => { m.rotation.y += Math.sin(t * 0.5 + m.userData.phase) * 0.0015; m.position.y += Math.sin(t + m.userData.phase) * 0.004; });
