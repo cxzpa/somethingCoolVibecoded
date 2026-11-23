@@ -7,6 +7,8 @@ Procedural Blender scenes for the two cinematic set pieces. Pure Python, no exte
 | **The Metalheart** | `heart.py` | A chrome sacred heart in a barbed crown of thorns, ribbed vessels rising into a fog-filled cathedral of hanging cables. One god-ray from above, red light from below. |
 | **The Reliquary** | `seraph.py` | A six-winged chrome seraph of blades and eyes, suspended on wires in a pale liminal gallery of scaffolding. Every eye turns to the camera. |
 
+| **Nox** | `nox.py` | The Vessel's sleeper as a rigged, game-ready GLB: a seamless sculpted body, fitted armor plates, silver hair locks, a face patch the page paints live, and two baked poses. Writes `assets/nox.glb`. |
+
 ## Shots
 
 | Shot | Heart | Seraph | What it is for |
@@ -38,3 +40,11 @@ Output lands in `renders/out/` (ignored by git). Open `renders/out/heart.blend` 
 ## Rough timings on an RTX 3080 Ti
 
 Estimates, to be confirmed by a first run: `preview` stills take seconds, the `preview` fly-in a few minutes, `final` stills under a minute each, and the `final` fly-in roughly 1–2 hours (144 frames). Render the preview fly-in first.
+
+## Rebuilding Nox
+
+```powershell
+& "C:\Program Files\Blender Foundation\Blender 5.3\blender.exe" -b -P renders\nox.py -- --out assets\nox.glb --preview renders\out
+```
+
+`--preview` also renders four check images (front, face, floating, slumped). The web page restyles her materials by name, paints her face, blends the two poses, floats her hair and turns her head toward you.
