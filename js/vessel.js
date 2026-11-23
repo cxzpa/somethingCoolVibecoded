@@ -389,8 +389,8 @@ function restyle(m) {
             float hw = pow(uv.y, 1.4) * uWave;
             // underwater: tips lift and spread away from the head, then sway
             vec2 outv = position.xz / max(length(position.xz), 0.001);
-            transformed.y += uv.y * uv.y * 0.16 * uWave;
-            transformed.xz += outv * uv.y * 0.07 * uWave;
+            transformed.y += uv.y * uv.y * 0.05 * uWave;
+            transformed.xz += outv * uv.y * uv.y * 0.035 * uWave;
             // gravity: the hair is rigid to the head, so bend it toward wherever 'down' is now
             transformed += (uGrav - vec3(0.0, -1.0, 0.0)) * pow(uv.y, 1.3) * 0.3 * (1.0 - 0.75 * uWave);
             transformed += vec3(sin(uT * 0.7 + position.y * 13.0 + position.x * 7.0),
@@ -631,7 +631,7 @@ function setupNox(gltf) {
   log('subject model loaded', 'c');
   window.__nox = { root, scene, camera, S, orbit }; // test hook
 }
-new GLTFLoader().load('assets/nox.glb', setupNox, undefined, (e) => { console.warn('[vessel] nox.glb unavailable, using the procedural doll', e); });
+new GLTFLoader().load('assets/nox.glb?v=7', setupNox, undefined, (e) => { console.warn('[vessel] nox.glb unavailable, using the procedural doll', e); });
 
 // ---------------------------------------------------------------- post
 const composer = new EffectComposer(renderer);

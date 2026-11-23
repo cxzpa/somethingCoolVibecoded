@@ -202,7 +202,7 @@ MAT = {
     "Chrome": mat("Chrome", (0.9, 0.9, 0.92, 1), 0.1, 1.0),
     "Glow": mat("Glow", (0.05, 0, 0, 1), 0.3, 0.0, emit=(1, 0.05, 0.06, 1)),
     "Hair": mat("Hair", (0.78, 0.8, 0.84, 1), 0.35),
-    "Face": mat("Face", (1, 1, 1, 1), 0.5),
+    "Face": mat("Face", (0.93, 0.86, 0.82, 1), 0.45),  # same as Skin, so no seam outside the website
 }
 
 
@@ -443,7 +443,7 @@ def build_face(body):
 # ------------------------------------------------------------------ hair: tapered locks, with a "float" shape key
 def build_hair(body):
     bvh = BVHTree.FromObject(body, bpy.context.evaluated_depsgraph_get())
-    SEG, RING = 14, 4
+    SEG, RING = 12, 6  # six-sided, flattened: rounded ribbons instead of square planks
     ER = V((0.092, 0.102, 0.114)) * HS  # ellipsoid around the head, for strand collision
 
     def surface(d):
@@ -499,13 +499,25 @@ def build_hair(body):
                     want = (want - n * want.dot(n)).normalized() * 0.9 + n * 0.12
                 d = want.normalized()
             if stopped:
-                pts.append(p.copy())  # this bang already reached the brows: the tail collapses to a point
-                continue
+                break
             p = collide(p + d * step)
             if kind == "bang" and not floating and abs(p.x) < 0.075 * HS and p.y < 0 and p.z < H0.z + 0.016 * HS:
                 p = V((p.x, p.y, H0.z + 0.016 * HS))  # bangs stop at the brows
                 stopped = True
             pts.append(p.copy())
+        if len(pts) < SEG + 1:  # a bang that stopped at the brows: re-space it so it tapers cleanly to its tip
+            cum = [0.0]
+            for i in range(1, len(pts)):
+                cum.append(cum[-1] + (pts[i] - pts[i - 1]).length)
+            total = max(cum[-1], 1e-5)
+            out, j = [], 0
+            for k in range(SEG + 1):
+                target = total * k / SEG
+                while j < len(pts) - 2 and cum[j + 1] < target:
+                    j += 1
+                seg_len = max(cum[j + 1] - cum[j], 1e-6)
+                out.append(pts[j].lerp(pts[j + 1], min(1.0, (target - cum[j]) / seg_len)))
+            pts = out
         return pts
 
     bm = bmesh.new()
@@ -513,20 +525,22 @@ def build_hair(body):
     float_co = []
     locks = []
     rs = random.Random(11)
-    for n_lock in range(380):
+    for n_lock in range(440):
         a = rs.uniform(0, math.tau)
-        el = rs.uniform(-0.05, 1.0) if n_lock < 300 else rs.uniform(1.0, 1.5)  # the last 80 cover the crown
+        el = rs.uniform(-0.05, 1.0) if n_lock < 300 else rs.uniform(0.9, 1.52)  # the last 140 cover the crown
         d = V((math.cos(a) * math.cos(el), math.sin(a) * math.cos(el), math.sin(el) + 0.35)).normalized()
         if d.y < -0.3 and d.z < 0.62:
             continue  # no roots on the face
         frontal = d.y < -0.15
         kind = "bang" if frontal and abs(d.x) < 0.5 else ("side" if (abs(d.x) > 0.55 and d.y < 0.25) or frontal else "back")
-        L = {"bang": rs.uniform(0.07, 0.115), "side": rs.uniform(0.3, 0.46), "back": rs.uniform(0.42, 0.66)}[kind]
+        if kind == "bang":  # fringe grows from high on the crown and falls forward over the forehead
+            d = V((rs.uniform(-0.45, 0.45), rs.uniform(-0.55, -0.22), rs.uniform(0.78, 1.0))).normalized()
+        L = {"bang": rs.uniform(0.13, 0.19), "side": rs.uniform(0.3, 0.46), "back": rs.uniform(0.42, 0.66)}[kind]
         fine = rs.random() < 0.22  # flyaway strands
         locks.append((d, kind, L * (rs.uniform(0.6, 1.05) if fine else 1), rs.uniform(0.0035, 0.006) if fine else (rs.uniform(0.008, 0.015) if kind != "bang" else rs.uniform(0.01, 0.017))))
     for d, kind, L, w in locks:
         root, nrm = surface(d)
-        root = root + nrm * 0.0025
+        root = root + nrm * 0.0035  # locks sit on top of the scalp layer, never under it
         seed = rs.random()
         hang = grow(root, nrm, L, kind, False, random.Random(seed))
         flt = grow(root, nrm, L, kind, True, random.Random(seed))
@@ -567,8 +581,8 @@ def build_hair(body):
             if math.sin(el) < hair_line and j < nv:
                 continue
             p, n = surface(d)
-            cap[(i, j)] = bm.verts.new(p + n * 0.003)
-            float_co.append(p + n * 0.003)
+            cap[(i, j)] = bm.verts.new(p + n * 0.0009)  # a thin dark underlayer hugging the scalp
+            float_co.append(p + n * 0.0009)
     for i in range(nu):
         for j in range(nv):
             q = [(i, j), ((i + 1) % nu, j), ((i + 1) % nu, j + 1), (i, j + 1)]
