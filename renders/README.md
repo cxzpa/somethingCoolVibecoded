@@ -6,7 +6,6 @@ Procedural Blender scenes for the two cinematic set pieces. Pure Python, no exte
 |---|---|---|
 | **The Metalheart** | `heart.py` | A chrome sacred heart in a barbed crown of thorns, ribbed vessels rising into a fog-filled cathedral of hanging cables. One god-ray from above, red light from below. |
 | **The Reliquary** | `seraph.py` | A six-winged chrome seraph of blades and eyes, suspended on wires in a pale liminal gallery of scaffolding. Every eye turns to the camera. |
-
 | **Nox** | `nox.py` | The Vessel's sleeper as a rigged, game-ready GLB: a seamless sculpted body, fitted armor plates, silver hair locks, a face patch the page paints live, and two baked poses. Writes `assets/nox.glb`. |
 
 ## Shots
