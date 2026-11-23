@@ -2,10 +2,49 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Angel Line</title>
-<meta http-equiv="refresh" content="0; url=halo.html">
-<style>body{margin:0;background:#070708;color:#a3a8b0;font:12px "Space Mono",monospace;display:grid;place-items:center;height:100vh}</style>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Angel Line — Structure</title>
+<meta name="description" content="A haunted 1998 network. Angels in the wires. Choose a node on the structure.">
+<meta name="theme-color" content="#070708">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23070708'/%3E%3Cellipse cx='32' cy='22' rx='18' ry='6' fill='none' stroke='%23e9e9ec' stroke-width='3'/%3E%3Cpath d='M32 30v26M24 40h16' stroke='%23c3141b' stroke-width='4'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Grenze+Gotisch:wght@400;600;800&family=Space+Mono:wght@400;700&family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/system.css">
+<link rel="stylesheet" href="css/structure.css">
+<script type="importmap">{ "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }</script>
 </head>
-<body><a href="halo.html" style="color:inherit">Entering Angel Line…</a></body>
+<body class="structure">
+<div class="stage" id="stage" aria-hidden="true"></div>
+<div class="labels" id="labels" aria-hidden="true"></div>
+<p class="boot-line" id="boot-line">Assembling structure…</p>
+
+<nav class="node-list" id="node-list" aria-label="Nodes"></nav>
+
+<section class="node-panel panel" id="node-panel" aria-live="polite">
+  <p class="panel-title"><span id="np-code">N-00</span><b id="np-status">online</b></p>
+  <p class="jp" id="np-jp">構造体</p>
+  <h1 class="display" id="np-name">Structure</h1>
+  <p class="np-desc" id="np-desc"></p>
+  <dl class="np-meta" id="np-meta"></dl>
+  <div class="np-actions">
+    <a class="btn" id="np-enter" href="#">Enter</a>
+    <button class="btn ghost" id="np-back" type="button">Overview</button>
+  </div>
+</section>
+
+<div class="readout" aria-hidden="true">
+  <span>X <b id="rx">000.0</b></span><span>Y <b id="ry">000.0</b></span><span>Z <b id="rz">000.0</b></span>
+  <span class="readout-sep">//</span><span id="rstate">holding</span>
+</div>
+<p class="hint" aria-hidden="true">↑ ↓ or scroll to travel · enter to open · esc for overview</p>
+
+<div class="nogl">
+  <p class="display" style="font-size:48px">Angel Line</p>
+  <p>Your browser could not start WebGL. The rooms are still here:</p>
+  <p><a href="halo.html">Halo</a> · <a href="vessel.html">Vessel</a> · <a href="signal.html">Signal</a> · <a href="flash.html">Flash</a> · <a href="press.html">Press</a></p>
+</div>
+
+<script type="module" src="js/structure.js"></script>
+</body>
 </html>

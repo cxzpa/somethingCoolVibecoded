@@ -1,0 +1,60 @@
+/* ---------- STRUCTURE (main menu) ---------- */
+.node-list { position: fixed; left: var(--gutter); top: 50%; transform: translateY(-50%); z-index: 20; display: grid; gap: 2px; }
+.node-list button {
+  display: grid; grid-template-columns: 42px 1fr; align-items: baseline; gap: 10px; text-align: left;
+  background: none; border: 0; padding: 7px 14px 7px 0; color: var(--hud);
+  font-family: var(--f-wide); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+  transition: color 0.2s ease, transform 0.25s var(--ease-out);
+}
+.node-list button .c { font-family: var(--f-mono); font-size: 9px; letter-spacing: 0.08em; color: var(--steel); }
+.node-list button:hover { color: var(--bone); transform: translateX(4px); }
+.node-list button[aria-current="true"] { color: var(--bone); transform: translateX(10px); }
+.node-list button[aria-current="true"] .c { color: var(--blood-hi); }
+.node-list button[aria-current="true"]::before { content: ""; position: absolute; left: -16px; width: 8px; height: 1px; margin-top: 7px; background: var(--blood-hi); }
+.node-list button { position: relative; }
+
+.node-panel { position: fixed; right: var(--gutter); top: 50%; z-index: 20; width: min(420px, 38vw);
+  transform: translateY(-50%); transition: opacity 0.35s var(--ease-out), transform 0.5s var(--ease-out), filter 0.35s ease; }
+.node-panel.is-away { opacity: 0; transform: translateY(-46%); filter: blur(8px); pointer-events: none; }
+.node-panel .jp { margin: 0 0 6px; font-size: 13px; }
+.node-panel .display { font-size: clamp(54px, 6vw, 88px); }
+.np-desc { color: #c9ccd2; margin: 14px 0 16px; max-width: 40ch; }
+.np-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px; margin: 0 0 20px; padding-top: 14px; border-top: 1px solid var(--glass-line); }
+.np-meta div { display: grid; gap: 2px; }
+.np-meta dt { font-family: var(--f-wide); font-size: 8px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--steel); }
+.np-meta dd { margin: 0; font-size: 12px; font-variant-numeric: tabular-nums; }
+.np-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.np-actions [hidden] { display: none; }
+
+.labels { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
+.label { position: absolute; left: 0; top: 0; pointer-events: auto; display: flex; align-items: center; gap: 8px; white-space: nowrap;
+  font-family: var(--f-wide); font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--bone);
+  background: none; border: 0; padding: 4px; transition: opacity 0.3s ease; }
+.label::before { content: ""; width: 9px; height: 9px; border: 1px solid var(--bone); transform: rotate(45deg); flex: none; }
+.label .c { color: var(--blood-hi); font-family: var(--f-mono); letter-spacing: 0.06em; }
+.label:hover::before { background: var(--blood-hi); border-color: var(--blood-hi); }
+.label.is-hidden { opacity: 0; pointer-events: none; }
+
+.readout { position: fixed; left: var(--gutter); bottom: 22px; z-index: 20; display: flex; gap: 14px; font-size: 10px; letter-spacing: 0.08em; color: var(--steel); font-variant-numeric: tabular-nums; }
+.readout b { color: var(--bone); font-weight: 400; }
+.readout #rstate { color: var(--ice); text-transform: uppercase; letter-spacing: 0.16em; }
+.hint { position: fixed; right: var(--gutter); bottom: 22px; z-index: 20; margin: 0; font-size: 10px; letter-spacing: 0.1em; color: var(--steel); }
+
+.flight-flash { position: fixed; inset: 0; z-index: 15; pointer-events: none; opacity: 0;
+  background: repeating-linear-gradient(0deg, rgba(143,230,232,0.08) 0 2px, transparent 2px 5px); mix-blend-mode: screen; }
+.flight-flash.is-on { animation: ff 0.9s ease-out; }
+@keyframes ff { 0% { opacity: 0; } 15% { opacity: 1; } 100% { opacity: 0; } }
+
+@media (max-width: 820px) {
+  .node-list { top: auto; bottom: 0; left: 0; right: 0; transform: none; display: flex; overflow-x: auto; gap: 0; padding: 10px 12px 16px; background: linear-gradient(transparent, rgba(7,7,8,0.9) 40%); }
+  .node-list button { grid-template-columns: auto; padding: 8px 12px; }
+  .node-list button .c { display: none; }
+  .node-list button[aria-current="true"] { transform: none; }
+  .node-list button[aria-current="true"]::before { left: 12px; top: 2px; margin: 0; }
+  .node-panel { left: 12px; right: 12px; width: auto; top: auto; bottom: 62px; transform: none; padding: 14px 16px; }
+  .node-panel.is-away { transform: translateY(12px); }
+  .node-panel .display { font-size: 46px; }
+  .np-desc { font-size: 12.5px; margin: 8px 0 10px; }
+  .np-meta { display: none; }
+  .readout, .hint { display: none; }
+}

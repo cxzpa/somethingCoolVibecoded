@@ -1,0 +1,31 @@
+body.signal { background: #f2f2f0; }
+.s-intro { position: fixed; left: var(--gutter); bottom: 28px; width: min(380px, 36vw); z-index: 20; transition: opacity 0.35s ease, transform 0.45s var(--ease-out); }
+.s-intro.is-away { opacity: 0; transform: translateY(10px); pointer-events: none; }
+.s-intro .jp, .s-focus .jp { margin: 0 0 4px; font-size: 12px; }
+.s-intro .display { font-size: clamp(56px, 6vw, 84px); }
+.s-desc { margin: 12px 0 0; color: #33353a; max-width: 40ch; }
+.s-focus { position: fixed; right: var(--gutter); top: 50%; transform: translateY(-50%); width: min(400px, 36vw); z-index: 20; animation: sIn 0.45s var(--ease-out) both; }
+@keyframes sIn { from { opacity: 0; transform: translateY(-46%); filter: blur(6px); } }
+.s-focus .display { font-size: clamp(44px, 4.6vw, 68px); margin-bottom: 12px; }
+.s-trans { font-size: 13px; line-height: 1.7; color: #1f2125; white-space: pre-line; min-height: 7em; margin: 0 0 16px; }
+.s-reply { display: grid; gap: 6px; }
+.s-line { display: flex; gap: 8px; }
+.s-line input { flex: 1; min-width: 0; font: inherit; font-size: 13px; color: var(--ink); background: transparent; border: 0; border-bottom: 1px solid var(--ink); padding: 8px 0; outline: 0; border-radius: 0; caret-color: var(--blood); }
+.s-line input::placeholder { color: #8d8d92; }
+.s-line input:focus { border-bottom-color: var(--blood); }
+.s-line .btn { padding: 10px 14px; }
+.s-out { min-height: 3.2em; margin: 12px 0 14px; font-size: 12px; color: var(--blood); }
+.s-out .me { color: #55575d; }
+.s-nav { display: flex; gap: 8px; flex-wrap: wrap; }
+.s-nav .btn { padding: 9px 12px; font-size: 9px; }
+.s-hint { position: fixed; right: var(--gutter); bottom: 28px; margin: 0; font-size: 10px; letter-spacing: 0.12em; color: #6b6b70; z-index: 20; }
+@media (max-width: 860px) {
+  .s-intro { left: 12px; right: 12px; width: auto; bottom: 14px; padding: 14px 16px; }
+  .s-intro .display { font-size: 44px; }
+  .s-desc { font-size: 12.5px; }
+  .s-focus { left: 12px; right: 12px; width: auto; top: auto; bottom: 12px; transform: none; padding: 14px 16px; max-height: 58vh; overflow-y: auto; }
+  @keyframes sIn { from { opacity: 0; transform: translateY(10px); } }
+  .s-focus .display { font-size: 38px; }
+  .s-trans { min-height: 0; font-size: 12.5px; }
+  .s-hint { display: none; }
+}

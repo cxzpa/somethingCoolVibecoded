@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Angel Line — Vessel</title>
+<meta name="description" content="Something is sleeping in the water, plugged in at the spine. Tap the glass.">
+<meta name="theme-color" content="#050607">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23050607'/%3E%3Crect x='20' y='8' width='24' height='48' rx='4' fill='none' stroke='%238fe6e8' stroke-width='3'/%3E%3Ccircle cx='32' cy='30' r='5' fill='%23e9e9ec'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Grenze+Gotisch:wght@400;600;800&family=Space+Mono:wght@400;700&family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/system.css">
+<link rel="stylesheet" href="css/vessel.css">
+<script type="importmap">{ "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }</script>
+</head>
+<body class="vessel">
+<div class="stage" id="stage" role="img" aria-label="A glass chamber full of glowing water. Inside, a porcelain cyborg doll floats curled up, cables plugged into its spine, silver hair drifting."></div>
+<p class="boot-line" id="boot-line">Filling chamber…</p>
+<div class="alarm" id="alarm" aria-hidden="true"></div>
+
+<section class="v-subject panel" aria-label="Subject">
+  <p class="panel-title"><span>Subject file</span><b id="v-state">dreaming</b></p>
+  <p class="jp">容器 07</p>
+  <h1 class="display">Nox</h1>
+  <dl class="v-rows">
+    <div><dt>Designation</dt><dd>NOX-07 / porcelain frame</dd></div>
+    <div><dt>Origin</dt><dd>Node 02, sublevel 9</dd></div>
+    <div><dt>Interface</dt><dd>6 spinal ports, 4 occupied</dd></div>
+    <div><dt>Notes</dt><dd>Responds to touch on the glass. Has not woken since 1998.</dd></div>
+  </dl>
+</section>
+
+<section class="v-vitals panel" aria-label="Vitals">
+  <p class="panel-title"><span>Vitals</span><b id="v-alert">nominal</b></p>
+  <div class="v-big"><span class="v" id="v-bpm">41</span><span class="k">bpm</span></div>
+  <canvas id="v-ecg" width="600" height="120" aria-hidden="true"></canvas>
+  <dl class="v-rows v-grid">
+    <div><dt>O₂ saturation</dt><dd class="v" id="v-o2">97%</dd></div>
+    <div><dt>Liquid level</dt><dd class="v" id="v-level">94%</dd></div>
+    <div><dt>Neural</dt><dd><span class="meter"><i id="v-neural"></i></span></dd></div>
+    <div><dt>Temperature</dt><dd class="v" id="v-temp">4.2 °C</dd></div>
+  </dl>
+</section>
+
+<section class="v-log panel" aria-label="Chamber log">
+  <p class="panel-title"><span>Log</span><b>live</b></p>
+  <div id="v-log" aria-live="polite"></div>
+</section>
+
+<div class="v-controls">
+  <button class="btn ghost" id="v-tap">Tap the glass</button>
+  <button class="btn" id="v-drain"><span class="fill" aria-hidden="true"></span><span class="txt">Hold to drain</span></button>
+</div>
+<p class="v-hint" aria-hidden="true">drag to look around · click the glass</p>
+
+<div class="nogl"><p class="display" style="font-size:48px">Vessel</p><p>This room needs WebGL. <a href="index.html">Back to the structure</a></p></div>
+<script type="module" src="js/vessel.js"></script>
+</body>
+</html>

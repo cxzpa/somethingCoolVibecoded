@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Angel Line — Signal</title>
+<meta name="description" content="A white room of hanging monitors. Every screen is still transmitting something.">
+<meta name="theme-color" content="#f2f2f0">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23f2f2f0'/%3E%3Crect x='12' y='18' width='40' height='28' fill='%23070708'/%3E%3Cpath d='M32 2v16' stroke='%23070708' stroke-width='2'/%3E%3Crect x='18' y='26' width='14' height='3' fill='%23c3141b'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Grenze+Gotisch:wght@400;600;800&family=Space+Mono:wght@400;700&family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/system.css">
+<link rel="stylesheet" href="css/signal.css">
+<script type="importmap">{ "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }</script>
+</head>
+<body class="light signal">
+<div class="stage" id="stage" role="img" aria-label="A white void full of monitors hanging from black cables, each screen showing a different transmission."></div>
+<p class="boot-line" id="boot-line">Tuning carrier…</p>
+
+<section class="s-intro panel light" id="s-intro">
+  <p class="panel-title"><span>Room N-03</span><b>broadcasting</b></p>
+  <p class="jp">信号</p>
+  <h1 class="display">Signal</h1>
+  <p class="s-desc">Nine screens, hung in the white. None of them are plugged into anything, and all of them are still transmitting. Click a screen to listen.</p>
+</section>
+
+<section class="s-focus panel light" id="s-focus" hidden aria-live="polite">
+  <p class="panel-title"><span id="sf-code">CH-01</span><b id="sf-state">receiving</b></p>
+  <h2 class="display" id="sf-name">Eye</h2>
+  <p class="s-trans" id="sf-text"></p>
+  <form class="s-reply" id="sf-form" autocomplete="off">
+    <label for="sf-in" class="k">Reply on this channel</label>
+    <div class="s-line"><input id="sf-in" maxlength="80" spellcheck="false" placeholder="say something to it"><button class="btn" type="submit">Send</button></div>
+  </form>
+  <div class="s-out" id="sf-out"></div>
+  <div class="s-nav"><button class="btn ghost" id="sf-prev" type="button">Previous</button><button class="btn ghost" id="sf-back" type="button">Step back</button><button class="btn ghost" id="sf-next" type="button">Next</button></div>
+</section>
+
+<p class="s-hint" aria-hidden="true">drag to drift · click a screen · esc to step back</p>
+<div class="nogl"><p class="display" style="font-size:48px">Signal</p><p>This room needs WebGL. <a href="index.html">Back to the structure</a></p></div>
+<script type="module" src="js/signal.js"></script>
+</body>
+</html>

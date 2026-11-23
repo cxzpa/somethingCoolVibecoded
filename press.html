@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Angel Line — Press</title>
+<meta name="description" content="A flyer machine from a scene that never existed. Every print is unique.">
+<meta name="theme-color" content="#070708">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23070708'/%3E%3Crect x='14' y='6' width='36' height='52' fill='%23ecebe6'/%3E%3Ccircle cx='36' cy='24' r='9' fill='%23c3141b'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Grenze+Gotisch:wght@400;600;800&family=Space+Mono:wght@400;700&family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/system.css">
+<link rel="stylesheet" href="css/press.css">
+</head>
+<body class="press">
+<div class="p-machine" aria-hidden="true"><div class="p-slot"></div><span>AL-PRESS 98 // FEED</span></div>
+<div class="p-stage"><canvas id="poster" width="1200" height="1800" role="img" aria-label="A generated flyer"></canvas></div>
+
+<aside class="p-panel panel" aria-label="Press controls">
+  <p class="panel-title"><span>Room N-05</span><b id="p-count">print 001</b></p>
+  <p class="jp">印刷</p>
+  <h1 class="display">Press</h1>
+  <p class="p-desc">A flyer machine from a scene that never existed. Every print is one of a kind. None of them make sense.</p>
+  <dl class="p-meta">
+    <div><dt>Layout</dt><dd id="p-layout">—</dd></div>
+    <div><dt>Seed</dt><dd id="p-seed">—</dd></div>
+  </dl>
+  <div class="p-actions">
+    <button class="btn" id="p-print">Print new</button>
+    <button class="btn ghost" id="p-prev">Previous</button>
+    <button class="btn ghost" id="p-save">Download</button>
+  </div>
+  <p class="p-hint"><kbd>Space</kbd> prints a new one</p>
+</aside>
+<script type="module" src="js/press.js"></script>
+</body>
+</html>
