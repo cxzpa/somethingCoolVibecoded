@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Angel Line — 天使回線</title>
+<meta name="description" content="A network for things with too many wings. An interactive angelpunk transmission.">
+<meta name="theme-color" content="#070708">
+<meta property="og:title" content="Angel Line — 天使回線">
+<meta property="og:description" content="A network for things with too many wings.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23070708'/%3E%3Cellipse cx='32' cy='22' rx='18' ry='6' fill='none' stroke='%23e9e9ec' stroke-width='3'/%3E%3Cpath d='M32 30v26M24 40h16' stroke='%23c3141b' stroke-width='4'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Grenze+Gotisch:wght@400;600;800&family=Space+Mono:wght@400;700&family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="is-booting">
+
+<!-- ============ BOOT ============ -->
+<div id="boot" role="dialog" aria-label="Boot sequence">
+  <pre id="boot-ascii" aria-hidden="true"></pre>
+  <pre id="boot-log" aria-live="polite"></pre>
+  <div id="boot-bar"><span></span></div>
+  <div id="boot-actions" hidden>
+    <button class="boot-btn" data-sound="1">Descend with sound</button>
+    <button class="boot-btn ghost" data-sound="0">Descend in silence</button>
+  </div>
+</div>
+
+<!-- ============ HUD ============ -->
+<header id="hud">
+  <a class="hud-logo" href="index.html" aria-label="Angel Line, back to the structure menu">
+    <svg viewBox="0 0 40 24" aria-hidden="true"><ellipse cx="20" cy="8" rx="14" ry="4.5"/><path d="M20 13v10M15 17h10"/></svg>
+    <span>Angel&nbsp;Line</span>
+  </a>
+  <nav class="hud-nav" aria-label="Sections">
+    <a href="#halo">Halo</a><a href="#seraph">Seraph</a><a href="#cardiac">Cardiac</a><a href="#os">OS</a><a href="#named">Named</a>
+  </nav>
+  <div class="hud-right">
+    <span class="hud-clock" id="hud-clock">00:00:00</span>
+    <button id="sound-toggle" class="hud-sound" aria-pressed="false" aria-label="Toggle sound">
+      <span class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="lbl">Sound off</span>
+    </button>
+  </div>
+</header>
+
+<div id="cursor" aria-hidden="true"><div class="ring"></div><div class="dot"></div></div>
+<div class="grain" aria-hidden="true"></div>
+
+<main>
+<!-- ============ HALO ============ -->
+<section id="halo" class="scene scene-halo" aria-label="Halo">
+  <canvas id="halo-gl" aria-hidden="true"></canvas>
+  <div class="halo-fallback" aria-hidden="true"></div>
+  <div class="halo-type">
+    <p class="halo-jp" lang="ja">天使回線</p>
+    <h1 class="halo-title">Angel Line</h1>
+    <p class="halo-sub">A network for things with too many&nbsp;wings.</p>
+  </div>
+  <dl class="halo-meta halo-meta-l">
+    <div><dt>Node</dt><dd>07 / Ophanim</dd></div>
+    <div><dt>Signal</dt><dd id="sig-val">Holy</dd></div>
+    <div><dt>Uplink</dt><dd><span id="uplink">98.6</span>%</dd></div>
+  </dl>
+  <dl class="halo-meta halo-meta-r">
+    <div><dt>Object</dt><dd>Crown, thorned</dd></div>
+    <div><dt>Material</dt><dd id="mat-val">Mercury chrome</dd></div>
+    <div><dt>Since</dt><dd>1998.11.23</dd></div>
+  </dl>
+  <div class="mode-switch" role="radiogroup" aria-label="Render the halo as">
+    <span class="mode-label">Render as</span>
+    <button role="radio" aria-checked="true" data-mode="0">Chrome</button>
+    <button role="radio" aria-checked="false" data-mode="1">ASCII</button>
+    <button role="radio" aria-checked="false" data-mode="2">Ink</button>
+  </div>
+  <div class="barcode" aria-hidden="true"><svg id="hero-barcode" viewBox="0 0 160 40" preserveAspectRatio="none"></svg><span>AL-0007-SRPH</span></div>
+  <a class="scroll-cue" href="#seraph"><span>Descend</span><svg viewBox="0 0 12 40" aria-hidden="true"><path d="M6 0v38M1 33l5 6 5-6"/></svg></a>
+</section>
+
+<!-- ============ SERAPH ============ -->
+<section id="seraph" class="scene scene-seraph" aria-label="Seraph">
+  <div class="sticky">
+    <canvas id="wings-canvas" aria-label="A six-winged angel drawn in ink. Its wings open as you scroll; click to scatter its blades." role="img"></canvas>
+    <div class="seraph-copy">
+      <h2 class="display">Six wings.<br>Every feather a&nbsp;blade.</h2>
+      <p>It opens as you scroll. Its eyes follow you. Click anywhere on the paper to make it molt; the blades always find their way back.</p>
+    </div>
+    <div class="seraph-index" aria-hidden="true">
+      <span>FIG. 03</span><span>SERAPH, PARTIAL</span><span id="unfurl-val">UNFURL 000%</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CARDIAC ============ -->
+<section id="cardiac" class="scene scene-cardiac" aria-label="Cardiac link">
+  <canvas id="wires-canvas" aria-label="Four hanging cables and a metal heart with four sockets. Drag each plug into a socket." role="img"></canvas>
+  <div class="cardiac-copy">
+    <h2 class="display">Plug into the&nbsp;heart.</h2>
+    <p>Four cables, four sockets. Drag each plug into the metal heart. It has been waiting a long time for someone to finish the circuit.</p>
+    <p class="cardiac-status"><span id="link-count">0</span>/4 linked <span id="link-msg"></span></p>
+    <button class="text-btn" id="wires-reset">Pull all cables</button>
+  </div>
+</section>
+
+<!-- ============ OS ============ -->
+<section id="os" class="scene scene-os" aria-label="Angel OS desktop">
+  <div class="os-intro">
+    <h2 class="display">The choir runs on old&nbsp;machines.</h2>
+    <p>Drag the windows around. Type <kbd>help</kbd> into the terminal.</p>
+  </div>
+  <div class="desktop" id="desktop">
+    <div class="desk-icons">
+      <button class="desk-icon" data-open="win-term"><svg viewBox="0 0 48 40" aria-hidden="true"><rect x="3" y="3" width="42" height="30" rx="2"/><path d="M10 13l6 5-6 5M20 24h10"/><path d="M14 37h20"/></svg><span>terminal</span></button>
+      <button class="desk-icon" data-open="win-text"><svg viewBox="0 0 48 40" aria-hidden="true"><path d="M10 2h20l8 8v28H10z"/><path d="M30 2v8h8M15 18h18M15 24h18M15 30h12"/></svg><span>manifesto.txt</span></button>
+      <button class="desk-icon" data-open="win-relic"><svg viewBox="0 0 48 40" aria-hidden="true"><ellipse cx="24" cy="10" rx="14" ry="5"/><path d="M24 17v21M17 24h14"/></svg><span>relic.exe</span></button>
+      <button class="desk-icon" data-open="win-warn"><svg viewBox="0 0 48 40" aria-hidden="true"><path d="M24 3l20 34H4z"/><path d="M24 15v10M24 30v2"/></svg><span>do_not_open</span></button>
+    </div>
+
+    <div class="win" id="win-term" style="--x:128px;--y:6%;--w:min(560px,92%);">
+      <div class="win-bar"><span class="win-title">terminal — choir@angelline</span><button class="win-x" aria-label="Close terminal"></button></div>
+      <div class="win-body term" id="term">
+        <div id="term-out" aria-live="polite"></div>
+        <form id="term-form" class="term-line" autocomplete="off"><label for="term-in">choir@angelline:~$</label><input id="term-in" spellcheck="false" autocapitalize="off" aria-label="Terminal command"></form>
+      </div>
+    </div>
+
+    <div class="win" id="win-text" style="--x:56%;--y:3%;--w:min(400px,92%);">
+      <div class="win-bar"><span class="win-title">manifesto.txt</span><button class="win-x" aria-label="Close manifesto"></button></div>
+      <div class="win-body textfile">
+<p>ANGELPUNK MANIFESTO, rev. 4</p>
+<p>1. A halo is a piece of hardware. Wear it like jewelry, maintain it like a weapon.</p>
+<p>2. Wings are not for flying. Wings are for being seen from very far away.</p>
+<p>3. Every angel is a little bit broken. The cracks are where the signal gets in.</p>
+<p>4. Chrome over gold. Thorns over feathers. Static over silence.</p>
+<p>5. We do not ascend. We upload.</p>
+<p>— left on this machine by someone with six wings and no name</p>
+      </div>
+    </div>
+
+    <div class="win" id="win-relic" style="--x:60%;--y:46%;--w:min(360px,92%);">
+      <div class="win-bar"><span class="win-title">relic.exe — rotating</span><button class="win-x" aria-label="Close relic"></button></div>
+      <div class="win-body relic"><pre id="relic-pre" aria-label="A spinning ASCII halo and cross" role="img"></pre></div>
+    </div>
+
+    <div class="win win-warn" id="win-warn" hidden style="--x:30%;--y:30%;--w:min(320px,88%);">
+      <div class="win-bar"><span class="win-title">system warning</span><button class="win-x" aria-label="Close warning"></button></div>
+      <div class="win-body warn-body">
+        <svg viewBox="0 0 48 40" aria-hidden="true"><path d="M24 3l20 34H4z"/><path d="M24 15v10M24 30v2"/></svg>
+        <p>Your halo is unpinned. Continuing may cause spontaneous ascension.</p>
+        <div class="warn-actions"><button class="os-btn" data-warn="ok">OK</button><button class="os-btn" data-warn="ok">Also OK</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ NAMED ============ -->
+<section id="named" class="scene scene-named" aria-label="Be named">
+  <div class="named-rings" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+  <div class="named-grid">
+    <div class="named-copy">
+      <h2 class="display">Be&nbsp;named.</h2>
+      <p>Hold the button. The network will give you a name, a rank and a halo. Type your own name first if you want it to remember you; the same name always returns the same angel.</p>
+      <label class="name-field"><span>Your name, optional</span><input id="name-in" maxlength="24" placeholder="anonymous" autocomplete="off" spellcheck="false"></label>
+      <button class="hold-btn" id="hold-btn"><span class="hold-fill" aria-hidden="true"></span><span class="hold-txt">Hold to be named</span></button>
+      <div class="card-actions" id="card-actions" hidden>
+        <button class="text-btn" id="card-dl">Download card</button>
+        <button class="text-btn" id="card-again">Ask again</button>
+      </div>
+    </div>
+    <div class="card-stage">
+      <canvas id="card-canvas" width="720" height="1080" role="img" aria-label="Your angel identity card"></canvas>
+      <div class="card-placeholder" id="card-ph" aria-hidden="true"><span>NO ANGEL ON FILE</span></div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="site-foot">
+  <div class="marquee" aria-hidden="true"><div class="marquee-track"><span>NOT A REAL HEAVEN (FAKE) † JUST A SIGNAL † LIMINAL YET HOLY † CHROME OVER GOLD † THORNS OVER FEATHERS † STATIC OVER SILENCE † </span><span>NOT A REAL HEAVEN (FAKE) † JUST A SIGNAL † LIMINAL YET HOLY † CHROME OVER GOLD † THORNS OVER FEATHERS † STATIC OVER SILENCE † </span></div></div>
+  <div class="foot-grid">
+    <p class="foot-end">End of transmission.</p>
+    <div class="badges" aria-label="Badges">
+      <span class="badge b1">ANGEL<b>LINE</b></span>
+      <span class="badge b2">NO <b>AI SLOP</b></span>
+      <span class="badge b3">BEST VIEWED<b>AT 3AM</b></span>
+      <span class="badge b4">CHROME<b>HEART</b></span>
+    </div>
+    <p class="foot-meta">You have descended <span id="visits">1</span> time<span id="visits-s"></span>. <a href="#halo">Return to the halo</a></p>
+  </div>
+</footer>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
