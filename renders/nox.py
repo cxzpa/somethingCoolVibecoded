@@ -28,8 +28,8 @@ argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 ap = argparse.ArgumentParser()
 ap.add_argument("--out", default="assets/nox.glb")
 ap.add_argument("--preview", default=None, help="folder for preview renders")
-ap.add_argument("--voxel", type=float, default=0.0034)
-ap.add_argument("--faces", type=int, default=20000, help="target triangles for the body")
+ap.add_argument("--voxel", type=float, default=0.0028)
+ap.add_argument("--faces", type=int, default=30000, help="target triangles for the body")
 A = ap.parse_args(argv)
 rnd = random.Random(7)
 
@@ -56,7 +56,8 @@ for s, sx in (("L", 1), ("R", -1)):
         (f"foot.{s}", (0.1 * sx, 0.012, 0.09), (0.1 * sx, -0.11, 0.02), f"shin.{s}"),
     ]
 BMAP = {b[0]: b for b in BONES}
-H0 = V((0, 0, 1.565))  # head centre
+H0 = V((0, 0, 1.562))  # head centre
+HS = 0.93  # head scale: a touch smaller than a chibi-leaning anime head, for more realistic proportions
 
 
 def seg(name):
@@ -106,21 +107,31 @@ def anime_head(bm):
                 Y += 0.0035 * math.exp(-(((X - sx * 0.035) / 0.017) ** 2 + ((Z + 0.004) / 0.012) ** 2))
         if Y > 0 and Z > -0.03:
             Y *= 1.06  # fuller back of the skull
-        v.co = H0 + V((X, Y, Z))
+        v.co = H0 + V((X, Y, Z)) * HS
 
 
 def build_body():
     bm = bmesh.new()
     anime_head(bm)
-    capsule(bm, (0, 0.006, 1.36), (0, 0.004, 1.5), 0.04, 0.036)  # neck into the head
+    capsule(bm, (0, 0.008, 1.36), (0, 0.006, 1.5), 0.034, 0.03)  # a slimmer neck into the head
+    # collarbones, upper chest, shoulder blades, a hint of abdomen
+    for sx in (-1, 1):
+        capsule(bm, (0.018 * sx, -0.05, 1.352), (0.13 * sx, -0.022, 1.348), 0.011, 0.012, segs=14)
+        ellipsoid(bm, (0.062 * sx, 0.062, 1.27), (0.05, 0.022, 0.065), rot=(0.1, 0, 0.15 * sx))
+    ellipsoid(bm, (0, -0.046, 1.08), (0.062, 0.03, 0.075))
     # torso: ribcage, waist, pelvis, bust, glutes, shoulders
     ellipsoid(bm, (0, 0.004, 1.24), (0.112, 0.078, 0.125))
-    ellipsoid(bm, (0, 0.002, 1.09), (0.086, 0.064, 0.09))
+    ellipsoid(bm, (0, 0.002, 1.09), (0.077, 0.059, 0.09))
     ellipsoid(bm, (0, 0.0, 0.94), (0.128, 0.088, 0.088))
     for sx in (-1, 1):
         ellipsoid(bm, (0.052 * sx, -0.052, 1.215), (0.05, 0.042, 0.048), rot=(0, 0, 0.2 * sx))
         ellipsoid(bm, (0.058 * sx, 0.035, 0.9), (0.066, 0.062, 0.07))
         ellipsoid(bm, (0.14 * sx, 0.004, 1.322), (0.05, 0.045, 0.04))
+        ellipsoid(bm, (0.158 * sx, 0.0, 1.305), (0.044, 0.044, 0.062), rot=(0, 0.25 * sx, 0))   # deltoid
+        ua0, ua1 = seg("upper_arm." + ("L" if sx > 0 else "R"))
+        ellipsoid(bm, ua0.lerp(ua1, 0.45) + V((0, -0.006, 0)), (0.034, 0.034, 0.075), rot=(0, 0.17 * sx, 0))  # biceps
+        kn = seg("shin." + ("L" if sx > 0 else "R"))[0]
+        ellipsoid(bm, kn + V((0, -0.036, 0.004)), (0.034, 0.024, 0.036))   # kneecap
         # arm
         a0, a1 = seg("upper_arm." + ("L" if sx > 0 else "R"))
         capsule(bm, a0, a1, 0.041, 0.031)
@@ -334,8 +345,8 @@ def build_details():
         out.append(ring(f"knee_ring_{s}", a + V((0, -0.01, 0)), b - a, 0.05, 0.007))
         out.append(build_glove(s, sx))
         out.append(build_boot(s, sx))
-    out.append(ring("neck_ring", (0, 0.004, 1.405), (0, 0.15, 1), 0.043, 0.0055))
-    out.append(ring("neck_ring_red", (0, 0.004, 1.39), (0, 0.15, 1), 0.044, 0.0022, "Glow"))
+    out.append(ring("neck_ring", (0, 0.007, 1.405), (0, 0.15, 1), 0.037, 0.005))
+    out.append(ring("neck_ring_red", (0, 0.007, 1.39), (0, 0.15, 1), 0.038, 0.002, "Glow"))
     # sternum core: a small red diamond
     bm = bmesh.new()
     bmesh.ops.create_icosphere(bm, subdivisions=1, radius=0.016, matrix=Matrix.Translation((0, -0.098, 1.255)) @ Matrix.Diagonal((0.8, 0.5, 1.3, 1)))
@@ -410,7 +421,7 @@ def build_face(body):
             z = FACE_Z[0] + (FACE_Z[1] - FACE_Z[0]) * v
             hit = bvh.ray_cast(V((x, -0.4, z)), V((0, 1, 0)))
             if hit[0] is not None and hit[0].y < -0.02:
-                grid[(i, j)] = (bm.verts.new(hit[0] + hit[1] * 0.0007), (u, v))
+                grid[(i, j)] = (bm.verts.new(hit[0] + hit[1] * 0.0012), (u, v))
     for i in range(nx):
         for j in range(nz):
             q = [(i, j), (i + 1, j), (i + 1, j + 1), (i, j + 1)]
@@ -431,8 +442,8 @@ def build_face(body):
 # ------------------------------------------------------------------ hair: tapered locks, with a "float" shape key
 def build_hair(body):
     bvh = BVHTree.FromObject(body, bpy.context.evaluated_depsgraph_get())
-    SEG, RING = 12, 5
-    ER = V((0.092, 0.102, 0.114))  # ellipsoid around the head, for strand collision
+    SEG, RING = 14, 4
+    ER = V((0.092, 0.102, 0.114)) * HS  # ellipsoid around the head, for strand collision
 
     def surface(d):
         hit = bvh.ray_cast(H0 + d * 0.3, -d)
@@ -451,8 +462,8 @@ def build_hair(body):
         if e.length < 1 + margin:
             p = H0 + V((e.x * ER.x, e.y * ER.y, e.z * ER.z)) * ((1 + margin) / max(e.length, 1e-4))
         # the face window: nothing crosses the eyes, nose or mouth
-        if p.y < -0.025 and p.z < H0.z + 0.03 and p.z > H0.z - 0.14 and abs(p.x) < 0.088:
-            p = V((math.copysign(0.088, p.x if abs(p.x) > 1e-4 else 1), p.y, p.z))
+        if p.y < -0.025 and p.z < H0.z + 0.03 * HS and p.z > H0.z - 0.14 * HS and abs(p.x) < 0.088 * HS:
+            p = V((math.copysign(0.088 * HS, p.x if abs(p.x) > 1e-4 else 1), p.y, p.z))
         if 0.95 < p.z < 1.42 and p.y > -0.02:  # keep long hair off the back and shoulders
             r = math.hypot(p.x / 1.15, p.y)
             if r < 0.12:
@@ -465,6 +476,7 @@ def build_hair(body):
         p = root.copy()
         g = V((0, 0, -1))
         sway = V((rs.uniform(-1, 1), rs.uniform(-1, 1), 0)) * 0.12
+        stopped = False
         for k in range(1, SEG + 1):
             t = k / SEG
             step = L / SEG
@@ -481,9 +493,13 @@ def build_hair(body):
                 if near:  # slide along the skull instead of through it
                     want = (want - n * want.dot(n)).normalized() * 0.9 + n * 0.12
                 d = want.normalized()
+            if stopped:
+                pts.append(p.copy())  # this bang already reached the brows: the tail collapses to a point
+                continue
             p = collide(p + d * step)
-            if kind == "bang" and not floating and abs(p.x) < 0.075 and p.y < 0 and p.z < H0.z + 0.016:
-                p = V((p.x, p.y, H0.z + 0.016))  # bangs stop at the brows
+            if kind == "bang" and not floating and abs(p.x) < 0.075 * HS and p.y < 0 and p.z < H0.z + 0.016 * HS:
+                p = V((p.x, p.y, H0.z + 0.016 * HS))  # bangs stop at the brows
+                stopped = True
             pts.append(p.copy())
         return pts
 
@@ -492,16 +508,17 @@ def build_hair(body):
     float_co = []
     locks = []
     rs = random.Random(11)
-    for _ in range(150):
+    for n_lock in range(380):
         a = rs.uniform(0, math.tau)
-        el = rs.uniform(-0.05, 1.0)
+        el = rs.uniform(-0.05, 1.0) if n_lock < 300 else rs.uniform(1.0, 1.5)  # the last 80 cover the crown
         d = V((math.cos(a) * math.cos(el), math.sin(a) * math.cos(el), math.sin(el) + 0.35)).normalized()
         if d.y < -0.3 and d.z < 0.62:
             continue  # no roots on the face
         frontal = d.y < -0.15
         kind = "bang" if frontal and abs(d.x) < 0.5 else ("side" if (abs(d.x) > 0.55 and d.y < 0.25) or frontal else "back")
         L = {"bang": rs.uniform(0.07, 0.115), "side": rs.uniform(0.3, 0.46), "back": rs.uniform(0.42, 0.66)}[kind]
-        locks.append((d, kind, L, rs.uniform(0.014, 0.024) if kind != "bang" else rs.uniform(0.016, 0.026)))
+        fine = rs.random() < 0.22  # flyaway strands
+        locks.append((d, kind, L * (rs.uniform(0.6, 1.05) if fine else 1), rs.uniform(0.0035, 0.006) if fine else (rs.uniform(0.008, 0.015) if kind != "bang" else rs.uniform(0.01, 0.017))))
     for d, kind, L, w in locks:
         root, nrm = surface(d)
         root = root + nrm * 0.004
@@ -514,7 +531,7 @@ def build_hair(body):
         for k in range(SEG + 1):
             t = k / SEG
             width = w * (1 - t) ** 0.7 + 0.0008
-            thick = 0.0032 * (1 - t) + 0.0006
+            thick = min(0.0024, width * 0.35) * (1 - t) + 0.0005
             row = []
             for pts, store in ((hang, None), (flt, float_co)):
                 nxt = pts[min(k + 1, SEG)] - pts[max(k - 1, 0)]
@@ -625,6 +642,31 @@ def skin(ob, arm, rigid=None, allowed=None):
         for (d, name), w in zip(best, ws):
             if w / tot > 0.02:
                 ob.vertex_groups[name].add([v.index], w / tot, "REPLACE")
+    ob.parent = arm
+    mod = ob.modifiers.new("Armature", "ARMATURE")
+    mod.object = arm
+
+
+def skin_like(ob, src, arm):
+    """Copy skin weights from the nearest vertex of `src`, so a layer (the face) moves exactly with the skin under it."""
+    from mathutils.kdtree import KDTree
+    kd = KDTree(len(src.data.vertices))
+    for v in src.data.vertices:
+        kd.insert(v.co, v.index)
+    kd.balance()
+    for name, *_ in BONES:
+        ob.vertex_groups.new(name=name)
+    names = {g.index: g.name for g in src.vertex_groups}
+    for v in ob.data.vertices:
+        hits = kd.find_n(v.co, 3)
+        acc = {}
+        for co, idx, d in hits:
+            w = 1.0 / max(d, 1e-5)
+            for g in src.data.vertices[idx].groups:
+                acc[names[g.group]] = acc.get(names[g.group], 0) + g.weight * w
+        tot = sum(acc.values()) or 1
+        for n, w in acc.items():
+            ob.vertex_groups[n].add([v.index], w / tot, "REPLACE")
     ob.parent = arm
     mod = ob.modifiers.new("Armature", "ARMATURE")
     mod.object = arm
@@ -752,7 +794,7 @@ hair = build_hair(body)
 arm = build_armature()
 
 skin(body, arm)
-skin(face, arm, rigid="head")
+skin_like(face, body, arm)
 skin(hair, arm, rigid="head")
 for o in armor + details:
     skin(o, arm, rigid=nearest_bone(o))

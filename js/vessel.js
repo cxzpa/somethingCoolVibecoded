@@ -42,8 +42,10 @@ const M = {
   red: new THREE.MeshBasicMaterial({ color: 0xff2a33 }),
   ice: new THREE.MeshBasicMaterial({ color: 0x8fe6e8 }),
   eye: new THREE.MeshBasicMaterial({ color: 0x1a1d20 }),
-  glass: new THREE.MeshPhysicalMaterial({ color: 0xe6f7f8, metalness: 0, roughness: 0.03, transmission: 1, thickness: 0.06, ior: 1.5, transparent: true, side: THREE.DoubleSide, envMapIntensity: 1.4 }),
-  liquid: new THREE.MeshPhysicalMaterial({ color: 0x9fe3e7, metalness: 0, roughness: 0.08, transmission: 0.92, thickness: 2.2, ior: 1.33, attenuationColor: new THREE.Color(0x2f9aa2), attenuationDistance: 3.2, transparent: true }),
+  // glass and water are plain transparent layers (not refractive transmission): refraction re-renders the
+  // inside as a blurred, shifted image and lost Nox's face details up close
+  glass: new THREE.MeshPhysicalMaterial({ color: 0xe6f7f8, metalness: 0, roughness: 0.03, transparent: true, opacity: 0.06, clearcoat: 1, clearcoatRoughness: 0.02, side: THREE.DoubleSide, depthWrite: false, envMapIntensity: 2.2 }),
+  liquid: new THREE.MeshPhysicalMaterial({ color: 0x1d6a70, metalness: 0, roughness: 0.1, transparent: true, opacity: 0.16, depthWrite: false, envMapIntensity: 0.4 }),
   hair: new THREE.LineBasicMaterial({ color: 0xc9ced6 }),
   bubble: new THREE.MeshBasicMaterial({ color: 0xbfeef0 }),
 };
@@ -111,6 +113,7 @@ surface.rotation.x = -Math.PI / 2; scene.add(surface);
 const ripple = new THREE.Mesh(new THREE.RingGeometry(0.9, 1, 64), new THREE.MeshBasicMaterial({ color: 0xdffbfc, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }));
 ripple.rotation.x = -Math.PI / 2; scene.add(ripple);
 const glass = new THREE.Mesh(new THREE.CylinderGeometry(TANK_R, TANK_R, TANK_H, 64, 1, true), M.glass);
+glass.renderOrder = 3; liquid.renderOrder = 2;
 glass.position.y = TANK_Y; scene.add(glass);
 // a decal on the glass
 const decal = (() => {
@@ -301,14 +304,15 @@ function updateCables(t) {
 // ---------------------------------------------------------------- NOX: the rigged character (assets/nox.glb)
 // The procedural doll above stays as a fallback until (or unless) the model loads.
 let NOX = null;
-const hairTime = { value: 0 }, hairWave = { value: 1 };
+const hairTime = { value: 0 }, hairWave = { value: 1 }, hairGrav = { value: new THREE.Vector3(0, -1, 0) };
 const FACE_W = 1024, FACE_H = 960; // face patch: x -0.08..0.08 m, z -0.108..+0.042 m around the head centre
 const faceCv = document.createElement('canvas'); faceCv.width = FACE_W; faceCv.height = FACE_H;
 const glowCv = document.createElement('canvas'); glowCv.width = FACE_W; glowCv.height = FACE_H;
 const faceTex = new THREE.CanvasTexture(faceCv); faceTex.colorSpace = THREE.SRGBColorSpace; faceTex.anisotropy = 8; faceTex.flipY = false; // glTF UVs are top-left origin
 const glowTex = new THREE.CanvasTexture(glowCv); glowTex.colorSpace = THREE.SRGBColorSpace; glowTex.flipY = false;
-const U = (x) => (0.5 + x / 0.16) * FACE_W;            // metres across the face -> px
-const Vy = (z) => (1 - (z + 0.108) / 0.15) * FACE_H;    // metres up from the head centre -> px
+const FS = 0.93; // head scale used by renders/nox.py (HS): features scale about the head centre
+const U = (x) => (0.5 + (x * FS) / 0.16) * FACE_W;          // metres across the face -> px
+const Vy = (z) => (1 - (z * FS + 0.108) / 0.15) * FACE_H;  // metres up from the head centre -> px
 let lastOpen = -1;
 function drawFace(open) {
   if (Math.abs(open - lastOpen) < 0.015) return;
@@ -333,14 +337,14 @@ function drawFace(open) {
   [-1, 1].forEach((s) => { f.beginPath(); f.moveTo(U(s * 0.018), Vy(0.022)); f.quadraticCurveTo(U(s * 0.034), Vy(0.027 + open * 0.002), U(s * 0.05), Vy(0.02)); f.stroke(); });
   // eyes
   [-1, 1].forEach((s) => {
-    const cx = U(s * 0.036), cy = Vy(-0.006), w = 130, h = 84 * open;
+    const cx = U(s * 0.036), cy = Vy(-0.006), w = 130 * FS, h = 84 * FS * open;
     const inner = cx - s * w * 0.95, outer = cx + s * w;
     if (open > 0.06) {
       f.save();
       f.beginPath(); f.moveTo(inner, cy); f.bezierCurveTo(cx - s * w * 0.4, cy - h * 1.15, cx + s * w * 0.55, cy - h * 1.1, outer, cy - h * 0.25);
       f.bezierCurveTo(cx + s * w * 0.5, cy + h * 0.9, cx - s * w * 0.4, cy + h * 0.95, inner, cy); f.closePath();
       f.fillStyle = '#f4f6f7'; f.fill(); f.clip();
-      const ir = 66, ix = cx + s * 4, iy = cy + 5;
+      const ir = 66 * FS, ix = cx + s * 4, iy = cy + 5;
       const grad = f.createRadialGradient(ix, iy - 18, 4, ix, iy, ir);
       grad.addColorStop(0, '#d8ffff'); grad.addColorStop(0.45, '#5fd2d6'); grad.addColorStop(0.85, '#145a63'); grad.addColorStop(1, '#0a2a30');
       f.fillStyle = grad; f.beginPath(); f.ellipse(ix, iy, ir * 0.82, ir, 0, 0, Math.PI * 2); f.fill();
@@ -376,17 +380,19 @@ function restyle(m) {
     case 'Glow': return new THREE.MeshBasicMaterial({ color: 0xff2a33 });
     case 'Face': return new THREE.MeshPhysicalMaterial({ color: 0xf3ebe6, map: faceTex, emissive: 0xffffff, emissiveMap: glowTex, emissiveIntensity: 0, roughness: 0.46, sheen: 0.5, sheenColor: 0xffe2da, sheenRoughness: 0.5, clearcoat: 0.12, clearcoatRoughness: 0.4, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
     case 'Hair': {
-      const h = new THREE.MeshPhysicalMaterial({ color: 0xd9dde5, roughness: 0.34, sheen: 1, sheenColor: 0xffffff, sheenRoughness: 0.28, clearcoat: 0.3, side: THREE.DoubleSide });
+      const h = new THREE.MeshPhysicalMaterial({ color: 0xbfc5cf, roughness: 0.38, sheen: 0.6, sheenColor: 0xe8f4ff, sheenRoughness: 0.32, clearcoat: 0.25, side: THREE.DoubleSide });
       h.defines = { USE_UV: '' };
       h.onBeforeCompile = (sh) => {
-        sh.uniforms.uT = hairTime; sh.uniforms.uWave = hairWave;
-        sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uT;\nuniform float uWave;')
+        sh.uniforms.uT = hairTime; sh.uniforms.uWave = hairWave; sh.uniforms.uGrav = hairGrav;
+        sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uT;\nuniform float uWave;\nuniform vec3 uGrav;')
           .replace('#include <begin_vertex>', `#include <begin_vertex>
             float hw = pow(uv.y, 1.4) * uWave;
             // underwater: tips lift and spread away from the head, then sway
             vec2 outv = position.xz / max(length(position.xz), 0.001);
             transformed.y += uv.y * uv.y * 0.16 * uWave;
             transformed.xz += outv * uv.y * 0.07 * uWave;
+            // gravity: the hair is rigid to the head, so bend it toward wherever 'down' is now
+            transformed += (uGrav - vec3(0.0, -1.0, 0.0)) * pow(uv.y, 1.3) * 0.3 * (1.0 - 0.75 * uWave);
             transformed += vec3(sin(uT * 0.7 + position.y * 13.0 + position.x * 7.0),
                                 sin(uT * 0.5 + position.z * 11.0) * 0.5,
                                 cos(uT * 0.6 + position.x * 10.0 + position.y * 5.0)) * 0.03 * hw;`);
@@ -428,6 +434,13 @@ function setupNox(gltf) {
   if (ports.length >= 4) cables.forEach((c, i) => { c.port = ports[i]; });
   const qw = new THREE.Quaternion(), ax = new THREE.Vector3(), q = new THREE.Quaternion(), hp = new THREE.Vector3();
   const head = bones.head, neck = bones.neck;
+  // bind-pose rotation of the head, so world 'down' can be expressed in the hair's own space
+  let headBind = null;
+  const _hp = new THREE.Vector3(), _hq = new THREE.Quaternion(), _hs = new THREE.Vector3();
+  if (hairMesh && head) {
+    const bi = hairMesh.skeleton.bones.indexOf(head);
+    if (bi >= 0) { const m = hairMesh.skeleton.boneInverses[bi]; const tq = new THREE.Quaternion(); m.decompose(_hp, tq, _hs); headBind = tq; }
+  }
   // The mixer only writes a bone when its pose value changes, so anything added on top (the look-at)
   // would pile up frame after frame. Re-sample neck and head from the clip every frame instead.
   const lookBones = [neck, head].filter(Boolean).map((b) => {
@@ -435,6 +448,7 @@ function setupNox(gltf) {
     return { b, interp: tr ? tr.createInterpolant() : null, rest: b.quaternion.clone() };
   });
   NOX = {
+    headPos(out) { if (head) { out.set(0, 0.09, -0.04); head.localToWorld(out); } },
     pose(k) {
       const time = clip ? k * clip.duration * 0.999 : 0;
       if (action) { action.time = time; mixer.update(0); }
@@ -442,6 +456,12 @@ function setupNox(gltf) {
     },
     hair(t, sub) {
       hairTime.value = t; hairWave.value = sub;
+      if (hairMesh && head && headBind) {
+        head.updateWorldMatrix(true, false);
+        head.matrixWorld.decompose(_hp, _hq, _hs);
+        _hq.multiply(headBind).invert();
+        hairGrav.value.set(0, -1, 0).applyQuaternion(_hq);
+      }
       if (hairMesh) hairMesh.morphTargetInfluences[hairMesh.morphTargetDictionary.float] = sub * 0.12;
     },
     face(open, camPos) {
@@ -467,7 +487,7 @@ function setupNox(gltf) {
   };
   drawFace(0);
   log('subject model loaded', 'c');
-  window.__nox = { root, scene, camera, faceCv, drawFace }; // test hook
+  window.__nox = { root, scene, camera, faceCv, drawFace, S, faceTex, orbit, headFocus, lookAt }; // test hook
 }
 new GLTFLoader().load('assets/nox.glb', setupNox, undefined, (e) => { console.warn('[vessel] nox.glb unavailable, using the procedural doll', e); });
 
@@ -543,7 +563,16 @@ cv.addEventListener('pointerup', (e) => {
     if (ray.intersectObjects([glass, liquid], false).length) tap();
   }
 });
-cv.addEventListener('wheel', (e) => { orbit.td = clamp(orbit.td + e.deltaY * 0.004, 4, 11); }, { passive: true });
+cv.addEventListener('wheel', (e) => { orbit.td = clamp(orbit.td + e.deltaY * 0.004, 2.1, 11); }, { passive: true });
+// pinch to zoom on touch screens
+const pinch = new Map(); let pinchD = 0;
+cv.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch') pinch.set(e.pointerId, [e.clientX, e.clientY]); });
+cv.addEventListener('pointermove', (e) => {
+  if (!pinch.has(e.pointerId)) return; pinch.set(e.pointerId, [e.clientX, e.clientY]);
+  if (pinch.size !== 2) return; const [a, b] = [...pinch.values()]; const d = Math.hypot(a[0] - b[0], a[1] - b[1]);
+  if (pinchD) orbit.td = clamp(orbit.td - (d - pinchD) * 0.02, 2.1, 11); pinchD = d;
+});
+['pointerup', 'pointercancel'].forEach(ev => cv.addEventListener(ev, (e) => { pinch.delete(e.pointerId); pinchD = 0; }));
 
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
@@ -568,6 +597,7 @@ function drawEcg(bpm, dt, alarm) {
 // ---------------------------------------------------------------- loop
 const clock = new THREE.Clock();
 let frameN = 0, lastBeat = 0, started = false;
+const headFocus = new THREE.Vector3(), lookAt = new THREE.Vector3();
 const headTarget = new THREE.Vector3();
 function frame() {
   const dt = Math.min(0.05, clock.getDelta());
@@ -593,14 +623,14 @@ function frame() {
 
   // the doll floats in the middle of the water, or sinks when it drains
   const sub = clamp((lv - 0.18) / 0.6, 0, 1);
-  S.slump = lerp(S.slump, 1 - sub, 0.05);
+  S.slump = lerp(S.slump, 1 - sub, 1 - Math.exp(-dt * 3));
   const floatY = TANK_Y - 0.2 + (reduceMotion ? 0 : Math.sin(t * 0.7) * 0.06);
   doll.position.set(0, lerp(BOTTOM + 0.72, floatY, sub), 0);
   applyPose(S.slump, t);
 
   // eyes open when tapped, and the head turns toward the camera
   const awake = t < S.eyesUntil && lv > 0.3;
-  S.eyes = lerp(S.eyes, awake ? 1 : 0, 0.08);
+  S.eyes = lerp(S.eyes, awake ? 1 : 0, 1 - Math.exp(-dt * 5)); // time-based, same speed on every device
   if (NOX) NOX.face(S.eyes, camera.position); else {
   J.eyes.forEach(e => { e.scale.y = lerp(0.18, 0.75, S.eyes); });
   M.eye.color.setRGB(lerp(0.1, 0.56, S.eyes), lerp(0.11, 0.9, S.eyes), lerp(0.12, 0.92, S.eyes));
@@ -636,12 +666,18 @@ function frame() {
   glowRingB.material = alarmOn ? M.red : M.ice;
 
   // camera
-  orbit.yaw = lerp(orbit.yaw, orbit.ty + (reduceMotion || dragging ? 0 : Math.sin(t * 0.08) * 0.25), 0.06);
-  orbit.pitch = lerp(orbit.pitch, orbit.tp, 0.06); orbit.dist = lerp(orbit.dist, orbit.td, 0.08);
+  orbit.yaw = lerp(orbit.yaw, orbit.ty + (reduceMotion || dragging ? 0 : Math.sin(t * 0.08) * 0.25), 1 - Math.exp(-dt * 3.5));
+  const camK = 1 - Math.exp(-dt * 4.5);
+  orbit.pitch = lerp(orbit.pitch, orbit.tp, camK); orbit.dist = lerp(orbit.dist, orbit.td, camK);
   const narrow = innerWidth < 900;
   const dist = orbit.dist * (narrow ? 1.35 : 1);
-  camera.position.set(Math.sin(orbit.yaw) * dist, TANK_Y + 0.45 + Math.sin(orbit.pitch) * dist, Math.cos(orbit.yaw) * dist);
-  camera.lookAt(0, TANK_Y - (narrow ? 0.35 : 0.1), 0);
+  // zooming in drifts the framing from the whole tank to her face
+  const zk = clamp((6.5 - orbit.dist) / 4.4, 0, 1);
+  const zoomEase = zk * zk * (3 - 2 * zk);
+  if (NOX && NOX.headPos) NOX.headPos(headFocus); else headFocus.set(0, doll.position.y + 0.6, 0);
+  lookAt.set(0, TANK_Y - (narrow ? 0.35 : 0.1), 0).lerp(headFocus, zoomEase);
+  camera.position.set(Math.sin(orbit.yaw) * dist, lerp(TANK_Y + 0.45, headFocus.y + 0.05, zoomEase) + Math.sin(orbit.pitch) * dist * (1 - zoomEase * 0.7), Math.cos(orbit.yaw) * dist);
+  camera.lookAt(lookAt);
 
   // vitals
   const bpm = Math.round(S.mode === 'idle' ? 41 + S.eyes * 22 + Math.sin(t * 0.3) * 2 : S.mode === 'empty' ? 128 + Math.sin(t * 9) * 6 : lerp(41, 112, 1 - lv));
